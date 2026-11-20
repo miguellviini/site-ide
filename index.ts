@@ -1,7 +1,7 @@
 // Edge Function: aprovar-matricula
 // - acao "aprovar": cria a CONTA PRÓPRIA do atleta (login + senha) e marca a matrícula como Aprovada.
 // - acao "nova_senha": gera nova senha para a conta do atleta que já existe.
-// Nunca altera a conta do responsável (matriculas.dono). Só admin e secretaria podem chamar.
+// Nunca altera a conta do responsável (matriculas.dono). Admin, secretaria e treinador podem aprovar matrículas.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 const DOMINIO = "ide-atletas.com.br"; // igual a LOGIN_DOMINIO no index.html
@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
     const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // 1) quem está chamando? precisa ser admin ou secretaria
+    // 1) quem está chamando? precisa ser admin, secretaria ou treinador
     const quem = createClient(url, anon, {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
       auth: { persistSession: false },
@@ -38,12 +38,13 @@ Deno.serve(async (req) => {
     if (!u?.user) return json({ erro: "Sessão inválida. Entre de novo no painel." }, 401);
     const adm = createClient(url, service, { auth: { persistSession: false } });
     const { data: perfil } = await adm.from("perfis").select("papel").eq("id", u.user.id).maybeSingle();
-    if (!perfil || !["admin", "secretaria"].includes(perfil.papel)) return json({ erro: "Sem permissão." }, 403);
+    if (!perfil || !["admin", "secretaria", "treinador"].includes(perfil.papel)) return json({ erro: "Sem permissão." }, 403);
 
     // 2) pedido
     const body = await req.json().catch(() => ({}));
     const matriculaId = String(body.matricula_id ?? "");
     const acao = body.acao === "nova_senha" ? "nova_senha" : "aprovar";
+    if (acao === "nova_senha" && perfil.papel === "treinador") return json({ erro: "Sem permissão." }, 403);
     if (!UUID.test(matriculaId)) return json({ erro: "Matrícula inválida." }, 400);
 
     const { data: m } = await adm.from("matriculas")
