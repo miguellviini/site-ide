@@ -149,8 +149,9 @@ else if(t==='dt')row[f]=e.value?new Date(e.value).toISOString():null;
 else row[f]=e.value.trim()||null}
 const f0=c.f[0][0];if(CK!=='galeria'&&!row[f0])throw new Error('Preencha o primeiro campo.');
 if(CK==='galeria'&&!CED&&!row.foto_path)throw new Error('Escolha uma foto.');
+if(!CED)for(const k in row)if(row[k]===null)delete row[k];
 const {error}=await(CED?sb.from(c.n).update(row).eq('id',CED):sb.from(c.n).insert(row));if(error)throw error;
-pubLoad();cmsOpen(CK)}catch(e){m.textContent='Não foi possível salvar: '+(e.message||e)}}
+pubLoad();cmsOpen(CK)}catch(e){const x=/null value in column "(\w+)"/.exec(e.message||'');m.textContent=x?'Preencha o campo obrigatório: '+x[1].replace('_',' ')+'.':'Não foi possível salvar: '+(e.message||e)}}
 async function cmsDel(id){if(!confirm('Excluir este item?'))return;const c=CMS[CK],r=CROWS.find(x=>x.id===id)||{};const {error}=await sb.from(c.n).delete().eq('id',id);if(error)alert('Não foi possível excluir: '+error.message);else{const fs=c.f.filter(x=>x[2]==='img').map(x=>r[x[0]]).filter(Boolean);if(fs.length)await sb.storage.from('publico').remove(fs);pubLoad();cmsOpen(CK)}}
 // Conteúdo público vindo do banco
 const pu=p=>p&&sb?sb.storage.from('publico').getPublicUrl(p).data.publicUrl:'';
