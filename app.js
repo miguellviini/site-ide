@@ -13,10 +13,18 @@ const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nasciment
 ['Mãe',[['mae','Nome da mãe'],['maeRg','RG da mãe'],['maeCpf','CPF da mãe']]],
 ['Informações esportivas',[['pos','Posição'],['clube','Clube anterior (se houver)'],['cat','Categoria desejada']]],
 ['Documentos (foto nítida de cada um)',[['dCert','Certidão de nascimento ou RG','img'],['dRes','Comprovante de residência','img'],['dEsc','Comprovante de escolaridade','img']]],
-['Consentimentos',[['c1','Autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
+['Consentimentos',[['c1','Li a <a href="#privacidade" target="_blank">Política de privacidade</a> e autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
 ['Confirmação',[]]];
 const REQ={nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
 let s=0,V={};
+// CSV para Excel pt-BR (; e BOM). Células que começam com = + - @ ganham ' para não virarem fórmula.
+function csv(nome,cols,rows){const q=v=>{v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
+const t='\ufeff'+[cols.map(c=>q(c[0])),...rows.map(r=>cols.map(c=>q(r[c[1]])))].map(l=>l.join(';')).join('\r\n');
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/csv;charset=utf-8'}));a.download=nome+'-'+new Date().toISOString().slice(0,10)+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e4)}
+const MASK={cpf:v=>v.replace(/\D/g,'').slice(0,11).replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'),
+cep:v=>v.replace(/\D/g,'').slice(0,8).replace(/(\d{5})(\d)/,'$1-$2'),
+zap:v=>v.replace(/\D/g,'').slice(0,11).replace(/^(\d{2})(\d)/,'($1) $2').replace(/(\d{4,5})(\d{4})$/,'$1-$2')};
+const maskOf=k=>/cpf$/i.test(k)?'cpf':k==='cep'?'cep':k==='zap'?'zap':null;
 const cpfOk=c=>{c=String(c).replace(/\D/g,'');if(c.length!==11||/^(\d)\1+$/.test(c))return false;for(let t=9;t<11;t++){let d=0;for(let i=0;i<t;i++)d+=c[i]*(t+1-i);d=(d*10)%11%10;if(+c[t]!==d)return false}return true};
 const rz=(f,m,q)=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',q))};i.onerror=no;i.src=r.result};r.onerror=no;r.readAsDataURL(f)});
 async function pick(k,el){const f=el.files[0];if(!f)return;const n=$('#n_'+k);try{V[k]=await rz(f,k==='foto'?320:700,k==='foto'?.8:.5);n.textContent='Imagem anexada.'}catch(e){n.textContent='Não foi possível ler essa imagem. Tente outra.'}}
@@ -25,10 +33,14 @@ function draw(){$('#st').innerHTML=F.map((_,i)=>`<i class="${i<=s?'on':''}"></i>
 let h=`<h3>Etapa ${s+1} de ${F.length}: ${F[s][0]}</h3>`;
 F[s][1].forEach(([k,l,t])=>{if(t==='chk')h+=`<label><input type="checkbox" style="width:auto" ${V[k]?'checked':''} onchange="V.${k}=this.checked"> ${l}</label>`;
 else if(t==='img')h+=`<label>${l}<input type="file" accept="image/*" onchange="pick('${k}',this)"></label><p class="note" id="n_${k}">${V[k]?'Imagem anexada.':''}</p>`;
-else h+=`<label>${l}<input type="${t||'text'}" value="${esc(V[k])}" oninput="V.${k}=this.value"></label>`});
+else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
 if(s===F.length-1)h+=`<p>Atleta: <b>${esc(V.nome)}</b><br>Responsável: <b>${esc(V.resp)}</b></p><p class="note">Confira os dados. Ao enviar, você recebe um protocolo e abre a conversa com o WhatsApp do IDE já com os dados da matrícula.</p>${(sb&&!ME)?'<label>Crie uma senha de acesso (8 ou mais caracteres)<input type="password" autocomplete="new-password" oninput="V.senha=this.value"></label>':''}`;
 $('#fs').innerHTML=h;$('#bp').style.visibility=s?'visible':'hidden';$('#bn').textContent=s===F.length-1?'Enviar pré-matrícula':'Continuar'}
-function stepOk(){for(const [k] of F[s][1]){if(REQ[k]&&!V[k]){$('#fm').textContent='Preencha: '+REQ[k]+'.';return false}if(/cpf$/i.test(k)&&V[k]&&!cpfOk(V[k])){$('#fm').textContent='O CPF informado não é válido. Confira os números.';return false}}$('#fm').textContent='';return true}
+function stepOk(){for(const [k] of F[s][1]){if(REQ[k]&&!V[k]){$('#fm').textContent='Preencha: '+REQ[k]+'.';return false}if(/cpf$/i.test(k)&&V[k]&&!cpfOk(V[k])){$('#fm').textContent='O CPF informado não é válido. Confira os números.';return false}}if(s===0&&V.nasc){const d=new Date(V.nasc),h=new Date();if(d>h||d.getFullYear()<h.getFullYear()-60){$('#fm').textContent='Confira a data de nascimento.';return false}}
+if(V.zap&&!/^\d{10,11}$/.test(V.zap.replace(/\D/g,''))){$('#fm').textContent='WhatsApp: informe DDD e número (10 ou 11 dígitos).';return false}
+if(V.cep&&V.cep.replace(/\D/g,'').length!==8){$('#fm').textContent='O CEP precisa ter 8 números.';return false}
+if(V.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(V.email)){$('#fm').textContent='Confira o e-mail.';return false}
+$('#fm').textContent='';return true}
 function waMsg(proto){const g=k=>V[k]||'—';return `*Pré-matrícula IDE* ${proto}\nAtleta: ${g('nome')}\nNascimento: ${fd(V.nasc)}\nRG: ${g('rg')} | CPF: ${g('cpf')} | CEP: ${g('cep')}\nResponsável: ${g('resp')} (${g('zap')}) ${V.email||''}\nPai: ${g('pai')} | RG ${g('paiRg')} | CPF ${g('paiCpf')}\nMãe: ${g('mae')} | RG ${g('maeRg')} | CPF ${g('maeCpf')}\nPosição: ${g('pos')} | Categoria: ${g('cat')} | Clube anterior: ${g('clube')}\nUso de imagem autorizado: ${V.c2?'sim':'não'}\n\nVou enviar em seguida as fotos: atleta, certidão ou RG, comprovante de residência e de escolaridade.`}
 const toBlob=async d=>(await fetch(d)).blob();
 async function send(){const m=$('#fm');if(!sb||!ME){m.textContent='Entre na sua conta antes de enviar a matrícula.';want='matricula';location.hash='#login';return}m.textContent='Enviando…';
@@ -67,7 +79,8 @@ else if(M[i]==='Matrículas'){h+='<div class="empty">Carregando matrículas…</
 else h+=`<div class="empty"><b>Sem registros em ${M[i]}</b>Este módulo ainda não foi desenvolvido.</div>`;
 $('#adp').innerHTML=h}
 $('#side').onclick=e=>{if(e.target.dataset.i)adm(+e.target.dataset.i)};adm(0);
-const ST=['Recebida','Em análise','Aguardando documentos','Aprovada','Recusada'];
+const ST=['Recebida','Em análise','Aguardando documentos','Aprovada','Recusada','Arquivada'];
+let MF={q:'',arq:false};
 const mapM=r=>{const p=r.pai||{},q=r.mae||{};return{id:r.id,proto:r.protocolo,status:r.status,nome:r.nome,nasc:r.nascimento,rg:r.rg,cpf:r.cpf,cep:r.cep,resp:r.responsavel,zap:r.whatsapp,email:r.email,pai:p.nome,paiRg:p.rg,paiCpf:p.cpf,mae:q.nome,maeRg:q.rg,maeCpf:q.cpf,pos:r.posicao,cat:r.categoria,clube:r.clube_anterior,c2:r.uso_imagem,fotoPath:r.foto_path,docs:r.docs_paths||{},login:r.login,atletaUser:r.atleta_user,criado:r.criado}};
 const sUrl=async p=>{if(!sb||!p)return null;const {data}=await sb.storage.from('documentos').createSignedUrl(p,300);return data?data.signedUrl:null};
 async function loadMat(){const el=$('#adp');if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre para ver as matrículas</b></div>';return}
@@ -75,19 +88,23 @@ if(!['admin','secretaria','treinador'].includes(PAPEL)){el.innerHTML='<div class
 const {data,error}=await sb.from('matriculas').select('*').order('criado',{ascending:false});
 if(error){el.innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'</div>';return}MAT=data.map(mapM);renderMat()}
 function renderMat(){const m=sel&&MAT.find(x=>x.id===sel);if(m)return det(m);sel=null;
-$('#adp').innerHTML='<h3>Matrículas</h3>'+(MAT.length?`<div class="scroll"><table><tr><th>Protocolo</th><th>Atleta</th><th>Categoria</th><th>Status</th></tr>${MAT.map(x=>`<tr style="cursor:pointer" onclick="sel='${esc(x.id)}';renderMat()"><td>${esc(x.proto)}</td><td>${esc(x.nome)}</td><td>${esc(x.cat||'—')}</td><td><span class="badge">${esc(x.status)}</span></td></tr>`).join('')}</table></div><p class="note">Toque em uma linha para ver os dados.</p>`:'<div class="empty"><b>Nenhuma matrícula recebida</b>As pré-matrículas enviadas pelo formulário aparecem aqui.</div>')}
+$('#adp').innerHTML=`<h3>Matrículas</h3><div class="row" style="margin:0 0 10px;align-items:end"><label style="flex:1;min-width:180px">Buscar<input value="${esc(MF.q)}" placeholder="Nome, protocolo ou categoria" oninput="MF.q=this.value;mRows()"></label><label style="width:auto"><input type="checkbox" style="width:auto" ${MF.arq?'checked':''} onchange="MF.arq=this.checked;renderMat()"> Ver arquivadas</label>${['admin','secretaria'].includes(PAPEL)?'<button class="btn alt" onclick="expM()">Exportar planilha</button>':''}</div><div id="mrows"></div>`;mRows()}
+function mRows(){const q=MF.q.toLowerCase(),L=MAT.filter(x=>(MF.arq?x.status==='Arquivada':x.status!=='Arquivada')&&(!q||(x.nome+' '+x.proto+' '+(x.cat||'')).toLowerCase().includes(q)));
+$('#mrows').innerHTML=L.length?`<div class="scroll"><table><tr><th>Protocolo</th><th>Atleta</th><th>Categoria</th><th>Status</th></tr>${L.map(x=>`<tr style="cursor:pointer" onclick="sel='${esc(x.id)}';renderMat()"><td>${esc(x.proto)}</td><td>${esc(x.nome)}</td><td>${esc(x.cat||'—')}</td><td><span class="badge">${esc(x.status)}</span></td></tr>`).join('')}</table></div><p class="note">${L.length} matrícula(s). Toque em uma linha para ver os dados.</p>`:'<div class="empty"><b>Nenhuma matrícula</b>'+(MAT.length?'Nada encontrado com esse filtro.':'As pré-matrículas enviadas pelo formulário aparecem aqui.')+'</div>'}
+function expM(){if(!confirm('A planilha contém CPF, RG e contatos de menores e responsáveis (dados pessoais protegidos pela LGPD). Guarde em local seguro e não compartilhe. Baixar?'))return;
+csv('matriculas',[['Protocolo','proto'],['Status','status'],['Atleta','nome'],['Nascimento','nasc'],['RG','rg'],['CPF','cpf'],['CEP','cep'],['Categoria','cat'],['Posição','pos'],['Clube anterior','clube'],['Responsável','resp'],['WhatsApp','zap'],['E-mail','email'],['Pai','pai'],['Mãe','mae']],MAT)}
 function det(m){const z=String(m.zap||'').replace(/\D/g,'');
 $('#adp').innerHTML=`<button class="btn alt" onclick="sel=null;renderMat()">Voltar</button><h3 style="margin-top:12px">${esc(m.nome)}</h3><div class="card"><p>Protocolo: <b>${esc(m.proto)}</b></p><label>Status<select onchange="setSt('${esc(m.id)}',this.value,this)">${ST.map(t=>`<option${t===m.status?' selected':''}>${t}</option>`).join('')}</select></label><div id="acs" style="margin:10px 0">${acessoH(m)}</div>
 <p>Nascimento: ${fd(m.nasc)}<br>RG: ${esc(m.rg)} · CPF: ${esc(m.cpf)} · CEP: ${esc(m.cep||'—')}</p>
 <p>Responsável: ${esc(m.resp)} · ${esc(m.zap)} ${esc(m.email)}</p>
 <p>Pai: ${esc(m.pai||'—')} · RG ${esc(m.paiRg||'—')} · CPF ${esc(m.paiCpf||'—')}<br>Mãe: ${esc(m.mae||'—')} · RG ${esc(m.maeRg||'—')} · CPF ${esc(m.maeCpf||'—')}</p>
 <p>Posição: ${esc(m.pos||'—')} · Categoria: ${esc(m.cat||'—')} · Clube anterior: ${esc(m.clube||'—')}<br>Uso de imagem autorizado: ${m.c2?'sim':'não'}</p>
-<div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${z}">WhatsApp</a>${m.email?`<a class="btn alt" href="mailto:${esc(m.email)}">E-mail</a>`:''}<button class="btn alt" onclick="cart()">Carteirinha</button><button class="btn alt" onclick="vdocs()">Ver documentos</button>${PAPEL==='admin'?`<button class="btn alt" onclick="delM()">Excluir</button>`:''}</div><div id="ext" style="margin-top:14px"></div></div>`}
+<div class="row"><a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${z}">WhatsApp</a>${m.email?`<a class="btn alt" href="mailto:${esc(m.email)}">E-mail</a>`:''}<button class="btn alt" onclick="cart()">Carteirinha</button><button class="btn alt" onclick="vdocs()">Ver documentos</button>${m.status!=='Arquivada'?`<button class="btn alt" onclick="setSt('${esc(m.id)}','Arquivada')">Arquivar</button>`:''}${PAPEL==='admin'?`<button class="btn alt" onclick="delM()">Excluir</button>`:''}</div><div id="ext" style="margin-top:14px"></div></div>`}
 const acessoH=m=>m.status!=='Aprovada'?'<p class="note">Quando o status virar Aprovada, o sistema cria a conta do atleta, com login e senha próprios. A conta do responsável não muda.</p>':(m.login?`<p>Login do atleta: <b>${esc(m.login)}</b></p><button class="btn alt" onclick="gerarAcesso('${esc(m.id)}','nova_senha')">Gerar nova senha</button>`:`<p class="note">Aprovada, mas o atleta ainda não tem conta.</p><button class="btn" onclick="gerarAcesso('${esc(m.id)}','aprovar')">Gerar login e senha</button>`);
 async function setSt(id,v,el){const x=MAT.find(y=>y.id===id),ant=x?x.status:null;
 if(v==='Aprovada'){const ok=await gerarAcesso(id,'aprovar');if(!ok&&el&&ant)el.value=ant;return}
 const {error}=await sb.from('matriculas').update({status:v,atualizado:new Date().toISOString()}).eq('id',id);
-if(error){alert('Não foi possível salvar o status: '+error.message);if(el&&ant)el.value=ant}else if(x){x.status=v;const b=$('#acs');if(b)b.innerHTML=acessoH(x)}}
+if(error){alert('Não foi possível salvar o status: '+error.message);if(el&&ant)el.value=ant}else if(x){x.status=v;if(v==='Arquivada'){sel=null;renderMat();return}const b=$('#acs');if(b)b.innerHTML=acessoH(x)}}
 async function gerarAcesso(id,acao){const box=$('#acs'),x=MAT.find(y=>y.id===id);if(box)box.innerHTML='<p class="note">Aguarde…</p>';
 const {data,error}=await sb.functions.invoke('aprovar-matricula',{body:{matricula_id:id,acao}});
 if(error||!data||data.erro){let msg=(data&&data.erro)||'erro desconhecido';if(error){try{const j=await error.context.json();msg=j.erro||error.message}catch(_){msg=error.message}}
@@ -137,9 +154,10 @@ if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre com o Supabase configurad
 if(ed===undefined){const {data,error}=await sb.from(c.n).select('*').order(c.o,{ascending:!c.desc});
 if(error){el.innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se a tabela não existe, rode o arquivo supabase/sql/04-complemento.sql no Supabase.</div>';return}
 CROWS=data;
-el.innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" onclick="cmsOpen('${k}',null)">Adicionar</button></div>`+(CROWS.length?CROWS.map(r=>`<div class="card" style="margin-bottom:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${esc(r[c.r]||'(sem título)')}</b> ${(r.publicado===false||r.ativa===false)?'<span class="badge">rascunho</span>':''}</div><div class="row" style="margin:0"><button class="btn alt" onclick="cmsOpen('${k}','${r.id}')">Editar</button><button class="btn alt" onclick="cmsDel('${r.id}')">Excluir</button></div></div>`).join(''):'<div class="empty"><b>Nada cadastrado ainda</b>Toque em Adicionar.</div>');return}
+el.innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" onclick="cmsOpen('${k}',null)">Adicionar</button>${CROWS.length?`<button class="btn alt" onclick="expC()">Exportar planilha</button>`:''}</div>`+(CROWS.length?CROWS.map(r=>`<div class="card" style="margin-bottom:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${esc(r[c.r]||'(sem título)')}</b> ${(r.publicado===false||r.ativa===false)?'<span class="badge">rascunho</span>':''}</div><div class="row" style="margin:0"><button class="btn alt" onclick="cmsOpen('${k}','${r.id}')">Editar</button><button class="btn alt" onclick="cmsDel('${r.id}')">Excluir</button></div></div>`).join(''):'<div class="empty"><b>Nada cadastrado ainda</b>Toque em Adicionar.</div>');return}
 const r=ed?CROWS.find(x=>x.id===ed)||{}:{};CED=ed;
 el.innerHTML=`<div class="card">${c.f.map(([f,l,t,o])=>cmsField(f,l,t,o,r[f])).join('')}<div class="row"><button class="btn" onclick="cmsSave()">Salvar</button><button class="btn alt" onclick="cmsOpen('${k}')">Cancelar</button></div><p class="note" id="cmsg" role="status"></p></div>`}
+function expC(){const c=CMS[CK];csv(c.n,c.f.map(([f,l])=>[l.replace(/ \(.*\)/,''),f]),CROWS)}
 async function cmsSave(){const c=CMS[CK],m=$('#cmsg');m.textContent='Salvando…';const row={};
 try{for(const [f,l,t] of c.f){const e=$('#cf_'+f);
 if(t==='bool')row[f]=e.checked;
@@ -225,7 +243,7 @@ const rows=[...caixa].map(x=>`<tr><td>${x.dt.split('-').reverse().join('/')}</td
 return `<div class="grid">${tri(en,sa)}</div>
 <form class="card" style="margin-top:12px" onsubmit="return addC(event)"><h3>Novo lançamento</h3><div class="grid"><div><label>Tipo<select name="t"><option value="e">Entrada</option><option value="s">Saída</option></select></label></div><div><label>Valor (R$)<input name="v" type="number" min="0.01" step="0.01" required></label></div><div><label>Data<input name="dt" type="date" required></label></div></div><label>Descrição<input name="d" required></label><div class="row"><button class="btn">Salvar lançamento</button></div></form>
 ${rows?`<div class="scroll" style="margin-top:12px"><table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th></th></tr>${rows}</table></div>`:'<div class="empty" style="margin-top:12px"><b>Nenhum lançamento</b>Registre a primeira entrada ou saída acima.</div>'}
-<p class="note">Lançamentos salvos no banco de dados; só admin e financeiro veem.</p>`}
+<div class="row"><button class="btn alt" onclick="csv('lancamentos',[['Data','dt'],['Tipo','tp'],['Descrição','d'],['Valor','v']],caixa.map(x=>({...x,tp:x.t==='e'?'Entrada':'Saída',v:String(x.v).replace('.',',')})))">Exportar planilha</button></div><p class="note">Lançamentos salvos no banco de dados; só admin e financeiro veem.</p>`}
 async function addC(e){e.preventDefault();const f=e.target.elements;const {error}=await sb.from('lancamentos').insert({tipo:f.t.value==='e'?'entrada':'saida',valor:parseFloat(f.v.value),data:f.dt.value,descricao:f.d.value.trim()});if(error)alert('Não foi possível salvar: '+error.message);else cashLoad(cash);return false}
 async function delC(id){if(!confirm('Remover este lançamento?'))return;const {error}=await sb.from('lancamentos').delete().eq('id',id);if(error)alert(error.message);else cashLoad(cash)}
 // Usuários (só admin): criar, trocar perfil, nova senha, excluir. O admin principal (protegido) é intocável.
