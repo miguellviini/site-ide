@@ -16,7 +16,7 @@ const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nasciment
 ['Consentimentos',[['c1','Li a <a href="#privacidade" target="_blank">Política de privacidade</a> e autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
 ['Confirmação',[]]];
 const REQ={nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
-let s=0,V={};
+let s=0,V={},CATN=[];
 // CSV para Excel pt-BR (; e BOM). Células que começam com = + - @ ganham ' para não virarem fórmula.
 function csv(nome,cols,rows){const q=v=>{v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
 const t='\ufeff'+[cols.map(c=>q(c[0])),...rows.map(r=>cols.map(c=>q(r[c[1]])))].map(l=>l.join(';')).join('\r\n');
@@ -33,7 +33,8 @@ function draw(){$('#st').innerHTML=F.map((_,i)=>`<i class="${i<=s?'on':''}"></i>
 let h=`<h3>Etapa ${s+1} de ${F.length}: ${F[s][0]}</h3>`;
 F[s][1].forEach(([k,l,t])=>{if(t==='chk')h+=`<label><input type="checkbox" style="width:auto" ${V[k]?'checked':''} onchange="V.${k}=this.checked"> ${l}</label>`;
 else if(t==='img')h+=`<label>${l}<input type="file" accept="image/*" onchange="pick('${k}',this)"></label><p class="note" id="n_${k}">${V[k]?'Imagem anexada.':''}</p>`;
-else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
+else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`${k==='cat'?'list="dlcat" ':''}oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
+if(F[s][1].some(x=>x[0]==='cat'))h+=`<datalist id="dlcat">${CATN.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`;
 if(s===F.length-1)h+=`<p>Atleta: <b>${esc(V.nome)}</b><br>Responsável: <b>${esc(V.resp)}</b></p><p class="note">Confira os dados. Ao enviar, você recebe um protocolo e abre a conversa com o WhatsApp do IDE já com os dados da matrícula.</p>${(sb&&!ME)?'<label>Crie uma senha de acesso (8 ou mais caracteres)<input type="password" autocomplete="new-password" oninput="V.senha=this.value"></label>':''}`;
 $('#fs').innerHTML=h;$('#bp').style.visibility=s?'visible':'hidden';$('#bn').textContent=s===F.length-1?'Enviar pré-matrícula':'Continuar'}
 function stepOk(){for(const [k] of F[s][1]){if(REQ[k]&&!V[k]){$('#fm').textContent='Preencha: '+REQ[k]+'.';return false}if(/cpf$/i.test(k)&&V[k]&&!cpfOk(V[k])){$('#fm').textContent='O CPF informado não é válido. Confira os números.';return false}}if(s===0&&V.nasc){const d=new Date(V.nasc),h=new Date();if(d>h||d.getFullYear()<h.getFullYear()-60){$('#fm').textContent='Confira a data de nascimento.';return false}}
@@ -63,7 +64,15 @@ $('#bp').onclick=()=>{s--;$('#fm').textContent='';draw()};
 $('#bn').onclick=()=>{if(!stepOk())return;if(s<F.length-1){s++;draw()}else send()};
 draw();
 // ADM
-const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','Comissão técnica','Treinos e presença','Jogos','Notícias','Avisos','Galeria','Patrocinadores','Sócios','Pagamentos','Financeiro','Transparência','Loja','Eventos','Usuários','Auditoria'];
+const TXT=[['hero_titulo','Início: título principal'],['hero_sub','Início: subtítulo'],['impacto','Início: texto "Muito além do futebol"'],['treino_home','Início: card de treinos'],['clube_historia','O Clube: História'],['clube_missao','O Clube: Missão e valores'],['clube_contato','O Clube: Contato (WhatsApp, e-mail, endereço)'],['info_local','Treinos: local'],['info_horario','Treinos: horário'],['info_quinta','Treinos: quintas-feiras'],['info_nota','Treinos: observação'],['info_mensal','Mensalidades'],['info_unif','Uniformes'],['socio_intro','Seja sócio: introdução'],['socio_1_nome','Sócio 1: nome do plano'],['socio_1','Sócio 1: valor e benefícios'],['socio_2_nome','Sócio 2: nome do plano'],['socio_2','Sócio 2: valor e benefícios'],['socio_3_nome','Sócio 3: nome do plano'],['socio_3','Sócio 3: valor e benefícios']];
+const DEF={};document.querySelectorAll('[data-txt]').forEach(e=>DEF[e.dataset.txt]=e.textContent.trim());
+function txApply(rows){const m=Object.fromEntries((rows||[]).map(r=>[r.chave,r.texto]));document.querySelectorAll('[data-txt]').forEach(e=>{e.textContent=m[e.dataset.txt]??DEF[e.dataset.txt]})}
+async function txLoad(){const {data,error}=await sb.from('site_textos').select('*');if(error){$('#cx').innerHTML='<div class="empty"><b>Erro</b>'+esc(error.message)+'<br>Rode o SQL 14-textos-site.sql no Supabase.</div>';return}
+const m=Object.fromEntries(data.map(r=>[r.chave,r.texto]));
+$('#cx').innerHTML='<p class="note">Edite os textos fixos do site. Em branco ou "Restaurar" volta ao texto original.</p>'+TXT.map(([k,l])=>`<div class="card" style="margin-bottom:8px"><label>${l}<textarea id="tx_${k}" rows="2">${esc(m[k]??DEF[k]??'')}</textarea></label><div class="row"><button class="btn" onclick="txSave('${k}')">Salvar</button><button class="btn alt" onclick="txSave('${k}',1)">Restaurar</button><span class="note" id="txm_${k}" role="status"></span></div></div>`).join('')}
+async function txSave(k,reset){const v=reset?'':$('#tx_'+k).value.trim(),n=$('#txm_'+k);const r=v?await sb.from('site_textos').upsert({chave:k,texto:v,atualizado:new Date().toISOString()}):await sb.from('site_textos').delete().eq('chave',k);
+if(r.error){n.textContent='Erro: '+r.error.message;return}if(!v)$('#tx_'+k).value=DEF[k]||'';n.textContent=v?'Salvo.':'Restaurado.';pubLoad()}
+const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','Comissão técnica','Treinos e presença','Jogos','Notícias','Avisos','Galeria','Patrocinadores','Sócios','Pagamentos','Financeiro','Transparência','Loja','Eventos','Textos do site','Usuários','Auditoria'];
 $('#side').innerHTML=M.map((m,i)=>`<button data-i="${i}">${m}</button>`).join('');
 let cur=0,sel=null,MAT=[],unsub=null;
 function adm(i){cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
@@ -71,6 +80,7 @@ let h=`<h3>${M[i]}</h3>`;
 if(M[i]==='Dashboard'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(dash),0)}
 else if(M[i]==='Entradas e saídas'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(cash),0)}
 else if(M[i]==='Financeiro'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(fin),0)}
+else if(M[i]==='Textos do site'){h+='<div id="cx">Carregando…</div>';setTimeout(txLoad,0)}
 else if(M[i]==='Usuários'){h+='<div id="cx">Carregando…</div>';setTimeout(usersLoad,0)}
 else if(M[i]==='Auditoria'){h+='<div id="cx">Carregando…</div>';setTimeout(audLoad,0)}
 else if(M[i]==='Pagamentos'){h+='<div id="cx">Carregando…</div>';setTimeout(payLoad,0)}
@@ -181,7 +191,7 @@ function renderElenco(){const pos=$('#fp').value,l=ELENCO.filter(a=>pos==='Todas
 fill('pub-elenco',l.length?`<div class="grid">${l.map(a=>`<div class="card">${a.foto_path?`<img src="${pu(a.foto_path)}" alt="Foto de ${esc(a.nome_publico)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<h3>${a.camisa!=null?'#'+a.camisa+' ':''}${esc(a.nome_publico)}</h3><p class="note">${esc(a.posicao||'')}</p></div>`).join('')}</div>`:'')}
 async function pubLoad(){if(!sb)return;try{
 const g=async(t,o,asc,f)=>{const r=await sb.from(t).select('*').eq(f||'publicado',true).order(o,{ascending:asc});return r.data||[]};
-const [no,av,jo,at,pa,ca,tr,ga,ev,td,lj,rs]=await Promise.all([g('noticias','criado',false),g('avisos','criado',false),g('jogos','data_hora',true),g('atletas','nome_publico',true),g('patrocinadores','nome',true),g('categorias','nome',true,'ativa'),g('treinos','dia',true),g('galeria','criado',false),g('eventos','data_hora',true),g('transparencia_docs','ano',false),g('loja_produtos','criado',false),sb.rpc('resumo_transparencia')]);
+const [no,av,jo,at,pa,ca,tr,ga,ev,td,lj,rs,tx]=await Promise.all([g('noticias','criado',false),g('avisos','criado',false),g('jogos','data_hora',true),g('atletas','nome_publico',true),g('patrocinadores','nome',true),g('categorias','nome',true,'ativa'),g('treinos','dia',true),g('galeria','criado',false),g('eventos','data_hora',true),g('transparencia_docs','ano',false),g('loja_produtos','criado',false),sb.rpc('resumo_transparencia'),sb.from('site_textos').select('*')]);
 const nc=n=>`<div class="card" style="margin-bottom:10px">${n.foto_path?`<img src="${pu(n.foto_path)}" alt="" style="width:100%;border-radius:8px;margin-bottom:8px">`:''}<span class="badge">${esc(n.categoria||'')}</span><h3>${esc(n.titulo)}</h3><p>${esc(n.texto)}</p><p class="note">${dh(n.criado)}</p></div>`;
 fill('pub-noticias',no.map(nc).join(''));fill('home-noticias',no.slice(0,3).map(nc).join(''));
 fill('pub-avisos',av.map(a=>`<div class="card" style="border-left:4px solid var(--acc);margin-bottom:10px"><h3>${esc(a.titulo)}</h3><p>${esc(a.texto)}</p></div>`).join(''));
@@ -195,10 +205,11 @@ const pc=x=>`<div class="card" style="margin-bottom:8px">${x.logo_path?`<img src
 fill('home-patro',pa.map(pc).join(''));
 fill('pub-treinos',tr.length?`<section><h3>Agenda de treinos</h3><div class="scroll"><table><tr><th>Dia</th><th>Horário</th><th>Categoria</th><th>Local</th></tr>${tr.map(t=>`<tr><td>${esc(t.dia)}</td><td>${esc(t.horario||'')}</td><td>${esc(t.categoria||'')}</td><td>${esc(t.local||'')}${t.obs?' · '+esc(t.obs):''}</td></tr>`).join('')}</table></div></section>`:'');
 fill('home-eventos',ev.filter(e=>!e.data_hora||new Date(e.data_hora)>=Date.now()-864e5).map(e=>`<div class="card" style="margin-bottom:8px"><h3>${esc(e.titulo)}</h3><p class="note">${dh(e.data_hora)} ${esc(e.local||'')}</p><p>${esc(e.descricao||'')}</p></div>`).join(''));
+txApply(tx&&tx.data);CATN=ca.map(x=>x.nome);
 const rr=rs&&rs.data&&rs.data[0];
 fill('pub-transp',`<div class="grid"><div class="card"><h3>Total arrecadado</h3><p>${brl(Number(rr?rr.entradas:0))}</p></div><div class="card"><h3>Total investido</h3><p>${brl(Number(rr?rr.saidas:0))}</p></div></div>`+(td.length?'<h3 style="margin-top:14px">Relatórios</h3>'+td.map(d=>`<div class="card" style="margin-bottom:8px"><b>${d.link?`<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.titulo)}</a>`:esc(d.titulo)}</b> <span class="note">${d.ano||''}</span></div>`).join(''):''));
 fill('pub-loja',lj.length?`<div class="grid">${lj.map(p=>`<div class="card">${p.foto_path?`<img src="${pu(p.foto_path)}" alt="${esc(p.nome)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<h3>${esc(p.nome)}</h3><p class="price">${p.preco!=null?brl(Number(p.preco)):'Consulte'}</p><p class="note">${esc(p.descricao||'')}</p></div>`).join('')}</div>`:'');
-const gal=document.querySelector('.gal');if(gal){gal.querySelectorAll('.dyn').forEach(e=>e.remove());if(ga.length)gal.querySelectorAll('.gi:not(.dyn)').forEach(e=>e.remove());gal.insertAdjacentHTML('afterbegin',ga.map(x=>`<button type="button" class="gi dyn" aria-label="Ampliar"><img loading="lazy" src="${pu(x.foto_path)}" alt="${esc(x.legenda||'Foto do IDE')}"></button>`).join(''))}
+const gal=document.querySelector('.gal');if(gal){gal.querySelectorAll('.dyn').forEach(e=>e.remove());gal.insertAdjacentHTML('afterbegin',ga.map(x=>`<button type="button" class="gi dyn" aria-label="Ampliar"><img loading="lazy" src="${pu(x.foto_path)}" alt="${esc(x.legenda||'Foto do IDE')}"></button>`).join(''))}
 }catch(e){console.error('pubLoad',e)}}
 // Pagamentos
 const PAYDEF={chave:'',nome:'Instituto DF e Entorno',cidade:'',whats:'',itens:[{nome:'Mensalidade',valor:'',link:''},{nome:'Uniforme',valor:'',link:''},{nome:'Contribuição voluntária',valor:'',link:''}]};
@@ -225,7 +236,7 @@ async function paySave(){payRead();const {error}=await sb.from('config_pagamento
 function payAdd(){payRead();PAY.itens.push({nome:'Novo item',valor:'',link:''});$('#cx').innerHTML=payEd()}
 function payDel(i){payRead();PAY.itens.splice(i,1);$('#cx').innerHTML=payEd()}
 // Caixa: lançamentos no banco (tabela lancamentos)
-let caixa=[],MATN=0;
+let caixa=[],MATN=0,EDC=null;
 async function cashLoad(fn){if(!sb||!ME){$('#cx').innerHTML='<div class="empty"><b>Entre para ver</b></div>';return}
 const {data,error}=await sb.from('lancamentos').select('*').order('data',{ascending:false});
 if(error){$('#cx').innerHTML='<div class="empty"><b>Sem acesso</b>'+esc(error.message)+'<br>Só admin e financeiro acessam. Se a tabela não existe, rode o ATUALIZAR-SUPABASE.sql.</div>';return}
@@ -239,12 +250,13 @@ function fin(){const [en,sa]=tot(),m={};caixa.forEach(x=>{const k=x.dt.slice(0,7
 return `<div class="grid">${tri(en,sa)}</div>`+(k.length?`<div class="scroll" style="margin-top:12px"><table><tr><th>Mês</th><th>Entradas</th><th>Saídas</th><th>Saldo</th></tr>${k.map(x=>`<tr><td>${x.slice(5)}/${x.slice(0,4)}</td><td>${brl(m[x][0])}</td><td>${brl(m[x][1])}</td><td>${brl(m[x][0]-m[x][1])}</td></tr>`).join('')}</table></div>`:'<div class="empty" style="margin-top:12px"><b>Sem lançamentos</b>Registre em Entradas e saídas.</div>')}
 const brl=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 function cash(){const [en,sa]=tot();
-const rows=[...caixa].map(x=>`<tr><td>${x.dt.split('-').reverse().join('/')}</td><td>${esc(x.d)}</td><td>${x.t==='e'?'Entrada':'Saída'}</td><td>${x.t==='e'?'':'−'}${brl(x.v)}</td><td><button class="btn alt" style="padding:4px 10px" onclick="delC('${x.id}')">Remover</button></td></tr>`).join('');
+const rows=[...caixa].map(x=>`<tr><td>${x.dt.split('-').reverse().join('/')}</td><td>${esc(x.d)}</td><td>${x.t==='e'?'Entrada':'Saída'}</td><td>${x.t==='e'?'':'−'}${brl(x.v)}</td><td><button class="btn alt" style="padding:4px 10px" onclick="editC('${x.id}')">Editar</button> <button class="btn alt" style="padding:4px 10px" onclick="delC('${x.id}')">Remover</button></td></tr>`).join('');
 return `<div class="grid">${tri(en,sa)}</div>
-<form class="card" style="margin-top:12px" onsubmit="return addC(event)"><h3>Novo lançamento</h3><div class="grid"><div><label>Tipo<select name="t"><option value="e">Entrada</option><option value="s">Saída</option></select></label></div><div><label>Valor (R$)<input name="v" type="number" min="0.01" step="0.01" required></label></div><div><label>Data<input name="dt" type="date" required></label></div></div><label>Descrição<input name="d" required></label><div class="row"><button class="btn">Salvar lançamento</button></div></form>
+<form class="card" id="fc" style="margin-top:12px" onsubmit="return addC(event)"><h3 id="fct">Novo lançamento</h3><div class="grid"><div><label>Tipo<select name="t"><option value="e">Entrada</option><option value="s">Saída</option></select></label></div><div><label>Valor (R$)<input name="v" type="number" min="0.01" step="0.01" required></label></div><div><label>Data<input name="dt" type="date" required></label></div></div><label>Descrição<input name="d" required></label><div class="row"><button class="btn">Salvar lançamento</button><button type="button" class="btn alt" id="fcx" hidden onclick="cashLoad(cash)">Cancelar edição</button></div></form>
 ${rows?`<div class="scroll" style="margin-top:12px"><table><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th></th></tr>${rows}</table></div>`:'<div class="empty" style="margin-top:12px"><b>Nenhum lançamento</b>Registre a primeira entrada ou saída acima.</div>'}
 <div class="row"><button class="btn alt" onclick="csv('lancamentos',[['Data','dt'],['Tipo','tp'],['Descrição','d'],['Valor','v']],caixa.map(x=>({...x,tp:x.t==='e'?'Entrada':'Saída',v:String(x.v).replace('.',',')})))">Exportar planilha</button></div><p class="note">Lançamentos salvos no banco de dados; só admin e financeiro veem.</p>`}
-async function addC(e){e.preventDefault();const f=e.target.elements;const {error}=await sb.from('lancamentos').insert({tipo:f.t.value==='e'?'entrada':'saida',valor:parseFloat(f.v.value),data:f.dt.value,descricao:f.d.value.trim()});if(error)alert('Não foi possível salvar: '+error.message);else cashLoad(cash);return false}
+function editC(id){const x=caixa.find(y=>y.id===id);if(!x)return;EDC=id;const f=$('#fc').elements;f.t.value=x.t;f.v.value=x.v;f.dt.value=x.dt;f.d.value=x.d;$('#fct').textContent='Editar lançamento';$('#fcx').hidden=false;$('#fc').scrollIntoView({behavior:'smooth'})}
+async function addC(e){e.preventDefault();const f=e.target.elements;const row={tipo:f.t.value==='e'?'entrada':'saida',valor:parseFloat(f.v.value),data:f.dt.value,descricao:f.d.value.trim()};const ed=EDC;EDC=null;const {error}=await(ed?sb.from('lancamentos').update(row).eq('id',ed):sb.from('lancamentos').insert(row));if(error)alert('Não foi possível salvar: '+error.message);else cashLoad(cash);return false}
 async function delC(id){if(!confirm('Remover este lançamento?'))return;const {error}=await sb.from('lancamentos').delete().eq('id',id);if(error)alert(error.message);else cashLoad(cash)}
 // Usuários (só admin): criar, trocar perfil, nova senha, excluir. O admin principal (protegido) é intocável.
 const PAPEIS=['admin','secretaria','financeiro','treinador','comunicacao','atleta'];

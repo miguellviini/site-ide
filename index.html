@@ -9,18 +9,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css"></head><body>
 <header><div class="bar"><img class="shield" src="img/logo-0388661f.png" alt="Escudo do Instituto DF e Entorno"><div class="brand">Instituto DF e Entorno</div><a class="header-action" href="#login" id="nav-login"><span aria-hidden="true">↗</span> Entrar</a><a class="header-action" href="#inicio" id="nav-sair" hidden onclick="logout();return false">Sair</a></div>
-<nav id="nav"><a href="#inicio">Início</a><a href="#clube">O Clube</a><a href="#elenco">Elenco</a><a href="#categorias">Categorias</a><a href="#info">Treinos e valores</a><a href="#pagamentos">Pagamentos</a><a href="#jogos">Jogos</a><a href="#noticias">Notícias</a><a href="#galeria">Galeria</a><a href="#loja">Loja</a><a href="#transparencia">Transparência</a><a href="#socio">Seja sócio</a><a href="#matricula">Matrícula</a><a href="#atleta" hidden>Área do atleta</a><a href="#adm" hidden>Painel ADM</a><a href="#tecnico">Arquitetura</a></nav></header>
+<nav id="nav"><a href="#inicio">Início</a><a href="#clube">O Clube</a><a href="#elenco">Elenco</a><a href="#categorias">Categorias</a><a href="#info">Treinos e valores</a><a href="#pagamentos">Pagamentos</a><a href="#jogos">Jogos</a><a href="#noticias">Notícias</a><a href="#galeria">Galeria</a><a href="#loja">Loja</a><a href="#transparencia">Transparência</a><a href="#socio">Seja sócio</a><a href="#matricula">Matrícula</a><a href="#atleta" hidden>Área do atleta</a><a href="#adm" hidden>Painel ADM</a></nav></header>
 <a class="skip" href="#" onclick="document.getElementById('main').focus();return false">Pular para o conteúdo</a>
 <main id="main" tabindex="-1">
 
 <div class="view" id="v-inicio">
 <div id="pub-avisos"></div>
 <div class="hero"><img src="img/logo-0388661f.png" width="120" height="120" alt="" style="align-self:flex-start;margin-bottom:auto">
-<h1>Futebol de base com estrutura e transparência</h1>
-<p>Matrícula online, prestação de contas aberta e acompanhamento para atletas e responsáveis.</p>
+<h1 data-txt="hero_titulo">Futebol de base com estrutura e transparência</h1>
+<p data-txt="hero_sub">Matrícula online, prestação de contas aberta e acompanhamento para atletas e responsáveis.</p>
 <div class="row"><a class="btn" href="#matricula">Fazer matrícula</a><a class="btn alt" href="#socio">Contribuir</a><a class="btn alt" href="#clube">Falar com o IDE</a></div></div>
-<section class="impacto" aria-labelledby="alem"><h2 id="alem">Muito além do futebol</h2><p class="msg">O IDE acredita que o esporte é muito mais do que uma atividade física. É uma ferramenta de transformação social, capaz de despertar talentos, fortalecer valores, criar oportunidades e mudar histórias. Nosso compromisso vai além das quatro linhas: trabalhamos para construir um futuro com mais oportunidades, inclusão e esperança.</p><div class="car" aria-live="polite"><blockquote id="car-q"></blockquote><div class="ctl"><button class="btn alt" type="button" id="car-p" aria-label="Frase anterior">‹</button><button class="btn alt" type="button" id="car-n" aria-label="Próxima frase">›</button><span class="note" id="car-c"></span></div></div></section>
-<section><h2>Treinos</h2><div class="card"><p><b>Arena Ribamar</b>, a partir das 18h50, com encerramento às 22h00. Às quintas-feiras, das 18h50 às 21h30.</p><a class="btn" href="#info">Ver mensalidades e uniformes</a></div></section>
+<section class="impacto" aria-labelledby="alem"><h2 id="alem">Muito além do futebol</h2><p class="msg" data-txt="impacto">O IDE acredita que o esporte é muito mais do que uma atividade física. É uma ferramenta de transformação social, capaz de despertar talentos, fortalecer valores, criar oportunidades e mudar histórias. Nosso compromisso vai além das quatro linhas: trabalhamos para construir um futuro com mais oportunidades, inclusão e esperança.</p><div class="car" aria-live="polite"><blockquote id="car-q"></blockquote><div class="ctl"><button class="btn alt" type="button" id="car-p" aria-label="Frase anterior">‹</button><button class="btn alt" type="button" id="car-n" aria-label="Próxima frase">›</button><span class="note" id="car-c"></span></div></div></section>
+<section><h2>Treinos</h2><div class="card"><p data-txt="treino_home">Arena Ribamar, a partir das 18h50, com encerramento às 22h00. Às quintas-feiras, das 18h50 às 21h30.</p><a class="btn" href="#info">Ver mensalidades e uniformes</a></div></section>
 <div class="band" data-frase="6"></div>
 <section><h2>Próximos jogos</h2><div class="empty" id="home-jogos"><b>Nenhum jogo cadastrado</b>A comissão cadastra as partidas no painel ADM e elas aparecem aqui.</div></section>
 <section><h2>Eventos</h2><div class="empty" id="home-eventos"><b>Nenhum evento cadastrado</b>Os eventos cadastrados no painel ADM aparecem aqui.</div></section>
@@ -34,30 +34,29 @@
 <div class="view" id="v-pagamentos"><h2>Pagamentos</h2><p class="note">Pague mensalidades, uniformes e contribuições por Pix ou cartão.</p><div class="grid" id="paygrid"></div><div class="card" style="margin-top:14px"><h3>Como funciona</h3><p class="note">1. Escolha o item. 2. Pague por Pix (QR Code ou copia e cola) ou pelo link do cartão. 3. <b>Envie o comprovante de pagamento (obrigatório)</b> ao IDE<span id="wz"></span>. Sem o comprovante, o pagamento não é confirmado.</p></div></div>
 <dialog id="px"><h3 id="pxt"></h3><div id="pxq"></div><p class="note">Pix copia e cola</p><div class="code" id="pxc"></div><p class="note"><b>Depois de pagar, o comprovante é obrigatório.</b> Envie-o ao IDE para o pagamento ser confirmado.</p><a class="btn alt" id="pxw" target="_blank" rel="noopener" hidden>Enviar comprovante</a><div class="row" style="justify-content:center"><button class="btn" id="pxcp" type="button">Copiar código</button><button class="btn alt" id="pxx" type="button">Fechar</button></div></dialog>
 <div class="view" id="v-clube"><h2>O Clube</h2>
-<div class="grid"><div class="card"><h3>História</h3><p class="note">Texto a ser fornecido pela direção do IDE.</p></div><div class="card"><h3>Missão e valores</h3><p class="note">Texto a ser fornecido pela direção do IDE.</p></div><div class="card"><h3>Contato</h3><p class="note">WhatsApp, e-mail e endereço a definir.</p></div></div></div>
+<div class="grid"><div class="card"><h3>História</h3><p class="note" data-txt="clube_historia">Texto a ser fornecido pela direção do IDE.</p></div><div class="card"><h3>Missão e valores</h3><p class="note" data-txt="clube_missao">Texto a ser fornecido pela direção do IDE.</p></div><div class="card"><h3>Contato</h3><p class="note" data-txt="clube_contato">WhatsApp, e-mail e endereço a definir.</p></div></div></div>
 
 <div class="view" id="v-elenco"><h2>Elenco</h2>
 <div class="grid"><div><label for="fc">Categoria</label><select id="fc"><option>Todas as ativas</option></select></div><div><label for="fp">Posição</label><select id="fp"><option>Todas</option><option>Goleiro</option><option>Defensor</option><option>Meio-campo</option><option>Atacante</option></select></div></div>
 <div class="empty" id="pub-elenco" style="margin-top:14px"><b>Nenhum atleta publicado</b>Para menores, foto e nome só aparecem com autorização de uso de imagem do responsável.</div></div>
 
-<div class="view" id="v-categorias"><h2>Categorias</h2><p class="note">Só aparecem as categorias que a direção ativar. Opções configuráveis:</p>
-<div class="row"><span class="badge">Sub-7</span><span class="badge">Sub-9</span><span class="badge">Sub-11</span><span class="badge">Sub-13</span><span class="badge">Sub-15</span><span class="badge">Sub-17</span><span class="badge">Sub-20</span><span class="badge">Adulto</span></div>
+<div class="view" id="v-categorias"><h2>Categorias</h2><p class="note">Só aparecem as categorias que a direção ativar.</p>
 <div class="empty" id="pub-cat" style="margin-top:14px"><b>Nenhuma categoria ativa</b>Cada página mostra atletas, comissão técnica, local, horários e calendário.</div></div>
 
 <div class="view" id="v-info"><h2>Treinos, mensalidades e uniformes</h2>
 <div class="grid">
-<div class="card"><h3>Local dos treinos</h3><p>Arena Ribamar</p></div>
-<div class="card"><h3>Horário</h3><p>Início às 18h50, encerramento às 22h00.</p></div>
-<div class="card"><h3>Quintas-feiras</h3><p>Das 18h50 às 21h30.</p></div>
+<div class="card"><h3>Local dos treinos</h3><p data-txt="info_local">Arena Ribamar</p></div>
+<div class="card"><h3>Horário</h3><p data-txt="info_horario">Início às 18h50, encerramento às 22h00.</p></div>
+<div class="card"><h3>Quintas-feiras</h3><p data-txt="info_quinta">Das 18h50 às 21h30.</p></div>
 </div>
-<p class="note" style="margin-top:10px">Os outros dias da semana em que há treino ainda precisam ser informados pela direção.</p>
-<div id="pub-treinos"></div><section><h3>Mensalidades</h3><div class="empty"><b>Valores a definir</b>A direção informa o valor de cada categoria e a data de vencimento. O pagamento online fica disponível quando o backend for conectado.</div></section>
-<section><h3>Uniformes</h3><div class="empty"><b>Informações a definir</b>A direção informa os itens do uniforme, tamanhos, valores e prazo de entrega.</div></section></div>
+<p class="note" data-txt="info_nota" style="margin-top:10px">Os outros dias da semana em que há treino ainda precisam ser informados pela direção.</p>
+<div id="pub-treinos"></div><section><h3>Mensalidades</h3><div class="empty"><b>Mensalidades</b><span data-txt="info_mensal">Valores a definir. A direção informa o valor de cada categoria e a data de vencimento.</span></div></section>
+<section><h3>Uniformes</h3><div class="empty"><b>Uniformes</b><span data-txt="info_unif">Informações a definir. A direção informa os itens do uniforme, tamanhos, valores e prazo de entrega.</span></div></section></div>
 
 <div class="view" id="v-jogos"><h2>Jogos e competições</h2><div class="empty" id="pub-jogos"><b>Sem partidas cadastradas</b>Calendário, resultados, classificação e artilharia usam dados lançados pela administração.</div></div>
 <div class="view" id="v-noticias"><h2>Notícias</h2><div class="empty" id="pub-noticias"><b>Sem notícias</b>Categorias: institucional, base, competições, resultados, eventos, projetos sociais, comunicados.</div></div>
 
-<div class="view" id="v-galeria"><h2>Galeria</h2><p class="note">Toque em uma foto para ampliar. Fotos de menores só devem ficar públicas com autorização do responsável.</p><div class="gal"><button type="button" class="gi" aria-label="Ampliar: Dois homens abraçados, de camisas azuis, fazendo sinal de joia"><img loading="lazy" src="img/galeria-1.jpg" alt="Dois homens abraçados, de camisas azuis, fazendo sinal de joia"></button><button type="button" class="gi" aria-label="Ampliar: Grupo de jovens com bastões infláveis verdes em formato de X"><img loading="lazy" src="img/galeria-2.jpg" alt="Grupo de jovens com bastões infláveis verdes em formato de X"></button><button type="button" class="gi" aria-label="Ampliar: Equipe de futsal com medalhas e troféu dourado"><img loading="lazy" src="img/galeria-3.jpg" alt="Equipe de futsal com medalhas e troféu dourado"></button><button type="button" class="gi" aria-label="Ampliar: Crianças e famílias reunidas em quadra coberta"><img loading="lazy" src="img/galeria-4.jpg" alt="Crianças e famílias reunidas em quadra coberta"></button><button type="button" class="gi" aria-label="Ampliar: Integrantes do IDE ao lado de uma equipe de reportagem"><img loading="lazy" src="img/galeria-5.jpg" alt="Integrantes do IDE ao lado de uma equipe de reportagem"></button><button type="button" class="gi" aria-label="Ampliar: Equipe infantil com a bandeira do Instituto DF e Entorno"><img loading="lazy" src="img/galeria-6.jpg" alt="Equipe infantil com a bandeira do Instituto DF e Entorno"></button><button type="button" class="gi" aria-label="Ampliar: Integrante da comissão técnica em campo, em preto e branco"><img loading="lazy" src="img/galeria-7.jpg" alt="Integrante da comissão técnica em campo, em preto e branco"></button><button type="button" class="gi" aria-label="Ampliar: Equipe feminina posando na Copa das Favelas Brasília"><img loading="lazy" src="img/galeria-8.jpg" alt="Equipe feminina posando na Copa das Favelas Brasília"></button><button type="button" class="gi" aria-label="Ampliar: Treinadores e atletas junto à grade do campo"><img loading="lazy" src="img/galeria-9.jpg" alt="Treinadores e atletas junto à grade do campo"></button><button type="button" class="gi" aria-label="Ampliar: Equipe com troféus e bandeira do instituto em Valparaíso"><img loading="lazy" src="img/galeria-10.jpg" alt="Equipe com troféus e bandeira do instituto em Valparaíso"></button></div></div>
+<div class="view" id="v-galeria"><h2>Galeria</h2><p class="note">Toque em uma foto para ampliar. Fotos de menores só devem ficar públicas com autorização do responsável.</p><div class="gal"></div></div>
 <dialog id="lb"><img id="lbi" alt=""><button type="button" class="btn" id="lbx">Fechar</button></dialog>
 
 <div class="view" id="v-privacidade"><h2>Política de privacidade</h2>
@@ -88,8 +87,8 @@
 
 <div class="view" id="v-loja"><h2>Loja</h2><div id="pub-loja"><div class="empty"><b>Nenhum produto publicado</b>Os produtos cadastrados no painel ADM aparecem aqui.</div></div></div>
 
-<div class="view" id="v-socio"><h2>Seja sócio</h2><p class="note">Os planos, valores e benefícios serão definidos pela direção. Nenhum benefício é prometido antes disso.</p>
-<div class="grid"><div class="card"><h3>Sócio apoiador</h3><p class="note">Valor e benefícios a definir</p></div><div class="card"><h3>Sócio colaborador</h3><p class="note">Valor e benefícios a definir</p></div><div class="card"><h3>Sócio benemérito</h3><p class="note">Valor e benefícios a definir</p></div></div></div>
+<div class="view" id="v-socio"><h2>Seja sócio</h2><p class="note" data-txt="socio_intro">Os planos, valores e benefícios serão definidos pela direção. Nenhum benefício é prometido antes disso.</p>
+<div class="grid"><div class="card"><h3 data-txt="socio_1_nome">Sócio apoiador</h3><p class="note" data-txt="socio_1">Valor e benefícios a definir</p></div><div class="card"><h3 data-txt="socio_2_nome">Sócio colaborador</h3><p class="note" data-txt="socio_2">Valor e benefícios a definir</p></div><div class="card"><h3 data-txt="socio_3_nome">Sócio benemérito</h3><p class="note" data-txt="socio_3">Valor e benefícios a definir</p></div></div></div>
 
 <div class="view" id="v-matricula"><h2>Pré-matrícula</h2>
 <div class="steps" id="st"></div><form id="f" onsubmit="return false"><div id="fs"></div>
@@ -99,16 +98,6 @@
 <div class="view" id="v-adm"><h2>Painel administrativo</h2>
 <div id="aw"><div class="row" style="margin:0 0 12px"><button class="btn alt" onclick="logout()">Sair</button></div><div class="adm"><div class="side" id="side"></div><div id="adp"></div></div></div></div>
 
-<div class="view" id="v-tecnico"><h2>Arquitetura e entrega</h2>
-<div class="grid">
-<div class="card"><h3>O que está pronto aqui</h3><p class="note">Site público, fluxo de matrícula em etapas e layout do painel, com espaço reservado para o escudo.</p></div>
-<div class="card"><h3>Banco e login</h3><p class="note">Recomendado: Supabase (Postgres, autenticação, armazenamento privado com links temporários e regras de acesso por perfil).</p></div>
-<div class="card"><h3>Pix e cartão</h3><p class="note">Gateway com Pix dinâmico e checkout hospedado (Asaas, Mercado Pago ou Pagar.me). A baixa do pagamento vem só por webhook autenticado. O IDE não guarda dados de cartão.</p></div>
-<div class="card"><h3>Notificações</h3><p class="note">E-mail transacional (Resend) e WhatsApp Business API, quando houver credenciais e autorização.</p></div>
-<div class="card"><h3>LGPD</h3><p class="note">Consentimento do responsável, autorização de imagem separada, criptografia, registro de atividades, política de privacidade e de retenção.</p></div>
-<div class="card"><h3>Perfis de acesso</h3><p class="note">Master, Secretaria, Financeiro, Treinador e Comunicação, cada um com permissões próprias.</p></div>
-<div class="card"><h3>Próximos passos</h3><p class="note">1) Enviar o escudo. 2) Escolher gateway e abrir conta. 3) Contratar desenvolvedor para o backend. 4) Testar em ambiente sandbox antes de publicar.</p></div>
-</div></div>
 </main>
 <footer>Instituto DF Entorno · <a href="#privacidade">Política de privacidade</a> · <a href="#termos">Termos de uso</a></footer>
 <script>(function(){function show(){if(window.__ide_ok)return;var h=(location.hash||'#inicio').slice(1);if(h==='adm'||h==='atleta'||h==='login')h='inicio';var v=document.getElementById('v-'+h)||document.getElementById('v-inicio');document.querySelectorAll('.view').forEach(function(e){e.classList.toggle('on',e===v)})}addEventListener('hashchange',show);addEventListener('load',show);document.addEventListener('DOMContentLoaded',show)})()</script>
