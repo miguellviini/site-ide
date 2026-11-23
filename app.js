@@ -51,7 +51,7 @@ $('#bp').onclick=()=>{s--;$('#fm').textContent='';draw()};
 $('#bn').onclick=()=>{if(!stepOk())return;if(s<F.length-1){s++;draw()}else send()};
 draw();
 // ADM
-const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','Comissão técnica','Treinos e presença','Jogos','Notícias','Avisos','Galeria','Patrocinadores','Sócios','Pagamentos','Financeiro','Transparência','Loja','Eventos','Usuários'];
+const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','Comissão técnica','Treinos e presença','Jogos','Notícias','Avisos','Galeria','Patrocinadores','Sócios','Pagamentos','Financeiro','Transparência','Loja','Eventos','Usuários','Auditoria'];
 $('#side').innerHTML=M.map((m,i)=>`<button data-i="${i}">${m}</button>`).join('');
 let cur=0,sel=null,MAT=[],unsub=null;
 function adm(i){cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
@@ -60,6 +60,7 @@ if(M[i]==='Dashboard'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cash
 else if(M[i]==='Entradas e saídas'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(cash),0)}
 else if(M[i]==='Financeiro'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(fin),0)}
 else if(M[i]==='Usuários'){h+='<div id="cx">Carregando…</div>';setTimeout(usersLoad,0)}
+else if(M[i]==='Auditoria'){h+='<div id="cx">Carregando…</div>';setTimeout(audLoad,0)}
 else if(M[i]==='Pagamentos'){h+='<div id="cx">Carregando…</div>';setTimeout(payLoad,0)}
 else if(CMSM[M[i]]){h+='<div id="cms"></div>';setTimeout(()=>cmsOpen(CMSM[M[i]]),0)}
 else if(M[i]==='Matrículas'){h+='<div class="empty">Carregando matrículas…</div>';setTimeout(loadMat,0)}
@@ -227,11 +228,23 @@ ${rows?`<div class="scroll" style="margin-top:12px"><table><tr><th>Data</th><th>
 <p class="note">Lançamentos salvos no banco de dados; só admin e financeiro veem.</p>`}
 async function addC(e){e.preventDefault();const f=e.target.elements;const {error}=await sb.from('lancamentos').insert({tipo:f.t.value==='e'?'entrada':'saida',valor:parseFloat(f.v.value),data:f.dt.value,descricao:f.d.value.trim()});if(error)alert('Não foi possível salvar: '+error.message);else cashLoad(cash);return false}
 async function delC(id){if(!confirm('Remover este lançamento?'))return;const {error}=await sb.from('lancamentos').delete().eq('id',id);if(error)alert(error.message);else cashLoad(cash)}
-// Usuários (só admin): trocar perfil
+// Usuários (só admin): criar, trocar perfil, nova senha, excluir. O admin principal (protegido) é intocável.
 const PAPEIS=['admin','secretaria','financeiro','treinador','comunicacao','atleta'];
-async function usersLoad(){const {data,error}=await sb.rpc('lista_usuarios');if(error||!data||!data.length){$('#cx').innerHTML='<div class="empty"><b>Sem acesso</b>Só o administrador gerencia usuários (rode o ATUALIZAR-SUPABASE.sql).</div>';return}
-$('#cx').innerHTML=`<div class="scroll"><table><tr><th>E-mail</th><th>Perfil</th></tr>${data.map(u=>`<tr><td>${esc(u.email)}</td><td><select ${u.id===ME.id?'disabled':''} onchange="setPapel('${u.id}',this.value)">${PAPEIS.map(p=>`<option${p===u.papel?' selected':''}>${p}</option>`).join('')}</select></td></tr>`).join('')}</table></div><p class="note" id="umsg" role="status">Você não pode alterar o seu próprio perfil.</p>`}
-async function setPapel(id,p){const {error}=await sb.from('perfis').update({papel:p}).eq('id',id);$('#umsg').textContent=error?'Erro: '+error.message:'Perfil atualizado.'}
+let USERS=[];
+async function userFn(body){const {data,error}=await sb.functions.invoke('gerenciar-usuario',{body});let m=error?error.message:(data&&data.erro);if(error&&error.context&&error.context.json){try{m=(await error.context.json()).erro||m}catch(e){}}return m?{erro:m}:data}
+async function usersLoad(){const {data,error}=await sb.rpc('lista_usuarios');if(error||!data||!data.length){$('#cx').innerHTML='<div class="empty"><b>Sem acesso</b>Só o administrador gerencia usuários (rode os SQL 07 e 09 no Supabase).</div>';return}
+USERS=data;
+$('#cx').innerHTML=`<form class="card" onsubmit="return addU(event)"><h3>Novo usuário</h3><div class="grid"><div><label>E-mail<input name="e" type="email" required autocomplete="off"></label></div><div><label>Senha (8+ caracteres)<input name="s" type="text" minlength="8" required autocomplete="off"></label></div><div><label>Perfil<select name="p">${PAPEIS.map(p=>`<option${p==='secretaria'?' selected':''}>${p}</option>`).join('')}</select></label></div></div><div class="row"><button class="btn">Criar usuário</button></div></form>
+<div class="scroll" style="margin-top:12px"><table><tr><th>E-mail</th><th>Perfil</th><th></th></tr>${data.map(u=>{const eu=u.id===ME.id;return `<tr><td>${esc(u.email)}${u.protegido?' <span class="badge">principal</span>':''}${eu?' <span class="note">(você)</span>':''}</td><td><select ${eu||u.protegido?'disabled':''} onchange="setPapel('${u.id}',this.value)">${PAPEIS.map(p=>`<option${p===u.papel?' selected':''}>${p}</option>`).join('')}</select></td><td>${u.protegido&&!eu?'':`<button class="btn alt" style="padding:4px 10px" onclick="passU('${u.id}')">Nova senha</button>`} ${u.protegido||eu?'':`<button class="btn alt" style="padding:4px 10px" onclick="delU('${u.id}')">Excluir</button>`}</td></tr>`}).join('')}</table></div><p class="note" id="umsg" role="status">O administrador principal não pode ser excluído nem rebaixado. Você não altera o seu próprio perfil.</p>`}
+async function addU(e){e.preventDefault();const f=e.target.elements;$('#umsg').textContent='Criando…';const r=await userFn({acao:'criar',email:f.e.value,senha:f.s.value,papel:f.p.value});if(r.erro)$('#umsg').textContent='Erro: '+r.erro;else{await usersLoad();$('#umsg').textContent='Usuário criado. Passe o e-mail e a senha a ele.'}return false}
+async function delU(id){const u=USERS.find(x=>x.id===id);if(!confirm('Excluir '+u.email+'? Isso não pode ser desfeito.'))return;const r=await userFn({acao:'excluir',id});if(r.erro)$('#umsg').textContent='Erro: '+r.erro;else usersLoad()}
+async function passU(id){const sn=prompt('Nova senha (8 ou mais caracteres):');if(!sn)return;const r=await userFn({acao:'nova_senha',id,senha:sn});$('#umsg').textContent=r.erro?'Erro: '+r.erro:'Senha alterada.'}
+async function setPapel(id,p){const {error}=await sb.from('perfis').update({papel:p}).eq('id',id);$('#umsg').textContent=error?'Erro: '+error.message:'Perfil atualizado.';if(error)usersLoad()}
+// Auditoria (só admin): últimas operações
+async function audLoad(){const [a,u]=await Promise.all([sb.from('auditoria').select('*').order('quando',{ascending:false}).limit(100),sb.rpc('lista_usuarios')]);
+if(a.error||!u.data){$('#cx').innerHTML='<div class="empty"><b>Sem acesso</b>Só o administrador vê o histórico (rode o SQL 09).</div>';return}
+const em=Object.fromEntries(u.data.map(x=>[x.id,x.email])),op={INSERT:'criou',UPDATE:'alterou',DELETE:'excluiu'};
+$('#cx').innerHTML=a.data.length?`<div class="scroll"><table><tr><th>Quando</th><th>Quem</th><th>O quê</th></tr>${a.data.map(x=>`<tr><td>${dh(x.quando)}</td><td>${esc(em[x.usuario]||'sistema')}</td><td>${op[x.operacao]||esc(x.operacao)} em ${esc(x.tabela)}</td></tr>`).join('')}</table></div>`:'<div class="empty"><b>Nada registrado ainda</b></div>'}
 // Login da área ADM
 
 function gate(){}
