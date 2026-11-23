@@ -110,5 +110,7 @@ function show(){var e=q('#car-q');if(!e)return;e.style.animation='none';void e.o
 function go(d){i=(i+d+F.length)%F.length;show()}
 function auto(){clearInterval(t);if(!matchMedia('(prefers-reduced-motion:reduce)').matches)t=setInterval(function(){go(1)},9000)}
 var p=q('#car-p'),n=q('#car-n');if(p)p.onclick=function(){go(-1);auto()};if(n)n.onclick=function(){go(1);auto()};
-document.querySelectorAll('[data-frase]').forEach(function(b){var k=b.getAttribute('data-frase');b.textContent='“'+F[k==='rot'?Math.floor(Math.random()*F.length):+k]+'”'});show();auto()})();</script>
+function bands(){document.querySelectorAll('[data-frase]').forEach(function(b){var k=b.getAttribute('data-frase');b.textContent='“'+F[k==='rot'?Math.floor(Math.random()*F.length):(+k)%F.length]+'”'})}
+window.setFrases=function(x){if(x&&x.length){F=x;i=Math.floor(Math.random()*F.length);bands();show()}};
+bands();show();auto()})();</script>
 </body></html>
