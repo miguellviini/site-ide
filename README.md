@@ -20,6 +20,13 @@ Site em HTML único (`index.html`) ligado ao Supabase (login, banco de dados e a
 admin, secretaria, financeiro, treinador, comunicacao, atleta (padrão de todo cadastro novo).
 
 ## Pendências conhecidas
-- Entradas e saídas e a configuração de Pagamentos ainda ficam só no aparelho (falta ligar ao banco).
+
 - Pix com confirmação manual. Confirmação automática exige gateway (Asaas, Mercado Pago ou Pagar.me) e função no servidor.
 - Falta política de privacidade e termos revisados por profissional (o sistema guarda dados de menores).
+
+## Atualização do banco
+Rode `supabase/sql/ATUALIZAR-SUPABASE.sql` (junta 04 a 07) no SQL Editor. Se já rodou e apareceu "permission denied", rode só `08-so-permissoes.sql`.
+
+## Arquivos do site
+`index.html` (páginas), `style.css`, `app.js` (lógica), `img/` (fotos e logo).
+Entradas e saídas, Pagamentos, Sócios, Loja, Transparência e Usuários agora ficam no banco. Textos de privacidade e termos são modelo: revisar com advogado.
