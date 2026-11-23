@@ -50,7 +50,7 @@ begin
 end $$;
 
 do $$ declare t text; begin
-  foreach t in array array['matriculas','categorias','atletas','comissao','jogos','noticias','patrocinadores','lancamentos','config_pagamentos','avisos','treinos','galeria','perfis']
+  foreach t in array array['matriculas','categorias','atletas','comissao','jogos','noticias','patrocinadores','lancamentos','config_pagamentos','avisos','treinos','galeria','eventos','perfis']
   loop
     execute format('drop trigger if exists audita on public.%I', t);
     execute format('create trigger audita after insert or update or delete on public.%I for each row execute function public.registra_auditoria()', t);

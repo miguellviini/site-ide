@@ -6,10 +6,10 @@ Site em HTML único (`index.html`) ligado ao Supabase (login, banco de dados e a
 - `index.html`: site público, matrícula, Área do atleta e Painel ADM.
 - `config.js`: URL e chave **publishable** do Supabase. Nunca coloque aqui a chave `secret` ou `service_role`.
 - `supabase-schema.sql`: tabelas, regras de segurança (RLS) e armazenamento. Rodar primeiro.
-- `supabase-addendum.sql`: tabelas de avisos, treinos e galeria. Rodar depois.
+- `supabase/sql/04..06`: avisos, treinos, galeria, eventos, contas de atletas e auditoria. Rodar em ordem, depois do schema.
 
 ## Configuração
-1. Supabase > SQL Editor: rodar `supabase-schema.sql` e depois `supabase-addendum.sql`.
+1. Supabase > SQL Editor: rodar `supabase-schema.sql` e depois os arquivos de `supabase/sql/` em ordem (04, 05, 06).
 2. Supabase > Authentication: ligar e-mail e senha; em URL Configuration, colocar o endereço do site em Site URL.
 3. Colar a Publishable Key em `config.js`.
 4. Publicar no GitHub Pages: Settings > Pages > Branch `main`, pasta `/ (root)`.
