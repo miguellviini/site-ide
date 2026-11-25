@@ -1,8 +1,8 @@
 const $=s=>document.querySelector(s);
 const STAFF=['admin','secretaria','financeiro','treinador','comunicacao'];
-let OK=false,want='inicio',ME=null,PAPEL=null,sb=null,IS_ATLETA=false;
+let RECOV=false,OK=false,want='inicio',ME=null,PAPEL=null,sb=null,IS_ATLETA=false;
 try{const C=window.IDE_CONFIG||{};if(C.SUPABASE_URL&&C.SUPABASE_KEY&&window.supabase)sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_KEY,{auth:{storage:window.sessionStorage}})}catch(x){}
-function route(){let h=(location.hash||'#inicio').slice(1);if(['adm','atleta'].includes(h)&&!OK){want=h;h='login'}if(h==='adm'&&OK&&!STAFF.includes(PAPEL))h='inicio';if(h==='atleta'&&OK&&!IS_ATLETA)h='inicio';$('#nav-login').hidden=OK;$('#nav-sair').hidden=!OK;$('#nav a[href="#adm"]').hidden=!OK||!STAFF.includes(PAPEL);$('#nav a[href="#atleta"]').hidden=!OK||!IS_ATLETA;const v=$('#v-'+h)||$('#v-inicio');document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e===v));document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v.id.slice(2)));scrollTo(0,0);if(h==='atleta')loadAt()}
+function route(){let h=(location.hash||'#inicio').slice(1);if(RECOV)h='novasenha';if(['adm','atleta'].includes(h)&&!OK){want=h;h='login'}if(h==='adm'&&OK&&!STAFF.includes(PAPEL))h='inicio';if(h==='atleta'&&OK&&!IS_ATLETA)h='inicio';$('#nav-login').hidden=OK;$('#nav-sair').hidden=!OK;$('#nav a[href="#adm"]').hidden=!OK||!STAFF.includes(PAPEL);$('#nav a[href="#atleta"]').hidden=!OK||!IS_ATLETA;const v=document.getElementById('v-'+h)||$('#v-inicio');document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e===v));document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v.id.slice(2)));scrollTo(0,0);if(h==='atleta')loadAt()}
 addEventListener('hashchange',route);route();
 // Matrícula
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15,7 +15,7 @@ const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nasciment
 ['Documentos (foto nítida de cada um)',[['dCert','Certidão de nascimento ou RG','img'],['dRes','Comprovante de residência','img'],['dEsc','Comprovante de escolaridade','img']]],
 ['Consentimentos',[['c1','Li a <a href="#privacidade" target="_blank">Política de privacidade</a> e autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
 ['Confirmação',[]]];
-const REQ={nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
+const REQ={foto:'a foto do atleta',dCert:'a foto da certidão de nascimento ou do RG',nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
 let s=0,V={},CATN=[];
 // CSV para Excel pt-BR (; e BOM). Células que começam com = + - @ ganham ' para não virarem fórmula.
 function csv(nome,cols,rows){const q=v=>{v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
@@ -29,7 +29,7 @@ const cpfOk=c=>{c=String(c).replace(/\D/g,'');if(c.length!==11||/^(\d)\1+$/.test
 const rz=(f,m,q)=>new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>{const i=new Image();i.onload=()=>{const k=Math.min(1,m/Math.max(i.width,i.height)),c=document.createElement('canvas');c.width=Math.round(i.width*k);c.height=Math.round(i.height*k);c.getContext('2d').drawImage(i,0,0,c.width,c.height);ok(c.toDataURL('image/jpeg',q))};i.onerror=no;i.src=r.result};r.onerror=no;r.readAsDataURL(f)});
 async function pick(k,el){const f=el.files[0];if(!f)return;const n=$('#n_'+k);try{V[k]=await rz(f,k==='foto'?320:700,k==='foto'?.8:.5);n.textContent='Imagem anexada.'}catch(e){n.textContent='Não foi possível ler essa imagem. Tente outra.'}}
 let _db;async function getDb(){if(_db)return _db;try{const c=window.claude&&await window.claude.use('db');if(c)_db=c}catch(e){}return _db}
-function draw(){$('#st').innerHTML=F.map((_,i)=>`<i class="${i<=s?'on':''}"></i>`).join('');
+function draw(){if(ME&&!V.email&&F[s][1].some(x=>x[0]==='email'))V.email=ME.email||'';$('#st').innerHTML=F.map((_,i)=>`<i class="${i<=s?'on':''}"></i>`).join('');
 let h=`<h3>Etapa ${s+1} de ${F.length}: ${F[s][0]}</h3>`;
 F[s][1].forEach(([k,l,t])=>{if(t==='chk')h+=`<label><input type="checkbox" style="width:auto" ${V[k]?'checked':''} onchange="V.${k}=this.checked"> ${l}</label>`;
 else if(t==='img')h+=`<label>${l}<input type="file" accept="image/*" onchange="pick('${k}',this)"></label><p class="note" id="n_${k}">${V[k]?'Imagem anexada.':''}</p>`;
@@ -54,6 +54,7 @@ async function send(){const m=$('#fm');if(!sb){m.textContent=noSb;return}
 if(!ME){if(!V.email){m.textContent='Informe o e-mail do responsável (etapa Responsável): ele será o seu login.';return}
 if(!V.senha||V.senha.length<8){m.textContent='Crie uma senha de 8 ou mais caracteres.';return}
 if(V.senha!==V.senha2){m.textContent='As senhas não conferem.';return}}
+if(ME){const du=await sb.from('matriculas').select('protocolo,status').eq('dono',ME.id).eq('cpf',V.cpf).not('status','in','(Recusada,Arquivada)').limit(1);if(du.data&&du.data.length){m.textContent='Já existe uma matrícula deste atleta nesta conta (protocolo '+du.data[0].protocolo+', '+du.data[0].status+'). Veja em Minha matrícula.';return}}
 m.textContent='Enviando…';
 const proto='IDE-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
 const msg=waMsg(proto),z=String(PAY.whats||'').replace(/\D/g,'');let saved=false,erro='';
@@ -175,11 +176,15 @@ eventos:{n:'eventos',o:'data_hora',r:'titulo',desc:1,f:[['titulo','Nome do event
 galeria:{n:'galeria',o:'criado',r:'legenda',desc:1,f:[['legenda','Legenda'],['foto_path','Foto','img'],PUB]},
 patrocinadores:{n:'patrocinadores',o:'nome',r:'nome',f:[['nome','Nome'],['nivel','Nível','sel',['master','oficial','institucional','apoiador']],['descricao','Descrição'],['link','Link (site ou Instagram)'],['logo_path','Logo','img'],PUB]}};
 let CK=null,CED=null,CROWS=[];
+function cmsList(k,c){const im=c.f.find(x=>x[2]==='img'),bad=r=>(r.publicado===false||r.ativa===false)?'<span class="badge">rascunho</span>':'',
+bt=r=>`<div class="row" style="margin:8px 0 0"><button class="btn alt" onclick="cmsOpen('${k}','${r.id}')">Editar</button><button class="btn alt" onclick="cmsDel('${r.id}')">Excluir</button></div>`;
+if(im)return `<div class="grid">${CROWS.map(r=>`<div class="card">${r[im[0]]?`<img src="${pu(r[im[0]])}" alt="${esc(r[c.r]||'Foto')}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;margin-bottom:8px">`:'<div class="empty" style="aspect-ratio:4/3;display:grid;place-items:center;margin-bottom:8px">Sem foto</div>'}<b>${esc(r[c.r]||'(sem título)')}</b> ${bad(r)}${bt(r)}</div>`).join('')}</div>`;
+return CROWS.map(r=>`<div class="card" style="margin-bottom:8px"><b>${esc(r[c.r]||'(sem título)')}</b> ${bad(r)}${bt(r)}</div>`).join('')}
 function cmsField(f,l,t,o,v){const id='cf_'+f;
 if(t==='bool')return `<label><input id="${id}" type="checkbox" style="width:auto" ${v?'checked':''}> ${l}</label>`;
 if(t==='area')return `<label>${l}<textarea id="${id}" rows="5">${esc(v)}</textarea></label>`;
 if(t==='sel')return `<label>${l}<select id="${id}"><option value=""></option>${o.map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('')}</select></label>`;
-if(t==='img')return `<label>${l}<input id="${id}" type="file" accept="image/*"></label>${v?'<p class="note">A foto atual continua se você não escolher outra.</p>':''}`;
+if(t==='img')return `${v?`<img src="${pu(v)}" alt="Foto atual" style="max-width:220px;width:100%;border-radius:8px;display:block;margin:8px 0">`:''}<label>${l}<input id="${id}" type="file" accept="image/*"></label>${v?'<p class="note">A foto atual continua se você não escolher outra.</p>':''}`;
 if(t==='dt'){const d=v?new Date(v):null;const z=d?new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16):'';return `<label>${l}<input id="${id}" type="datetime-local" value="${z}"></label>`}
 return `<label>${l}<input id="${id}" ${t==='num'?'type="number" inputmode="numeric"':t==='dec'?'inputmode="decimal"':''} value="${esc(v)}"></label>`}
 async function cmsOpen(k,ed){CK=k;const c=CMS[k],el=$('#cms');
@@ -187,7 +192,7 @@ if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre com o Supabase configurad
 if(ed===undefined){const {data,error}=await sb.from(c.n).select('*').order(c.o,{ascending:!c.desc});
 if(error){el.innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se a tabela não existe, rode o arquivo supabase/sql/04-complemento.sql no Supabase.</div>';return}
 CROWS=data;
-el.innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" onclick="cmsOpen('${k}',null)">Adicionar</button>${CROWS.length?`<button class="btn alt" onclick="expC()">Exportar planilha</button>`:''}</div>`+(CROWS.length?CROWS.map(r=>`<div class="card" style="margin-bottom:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>${esc(r[c.r]||'(sem título)')}</b> ${(r.publicado===false||r.ativa===false)?'<span class="badge">rascunho</span>':''}</div><div class="row" style="margin:0"><button class="btn alt" onclick="cmsOpen('${k}','${r.id}')">Editar</button><button class="btn alt" onclick="cmsDel('${r.id}')">Excluir</button></div></div>`).join(''):'<div class="empty"><b>Nada cadastrado ainda</b>Toque em Adicionar.</div>');return}
+el.innerHTML=`<div class="row" style="margin:0 0 10px"><button class="btn" onclick="cmsOpen('${k}',null)">Adicionar</button>${CROWS.length?`<button class="btn alt" onclick="expC()">Exportar planilha</button>`:''}</div>`+(CROWS.length?cmsList(k,c):'<div class="empty"><b>Nada cadastrado ainda</b>Toque em Adicionar.</div>');return}
 const r=ed?CROWS.find(x=>x.id===ed)||{}:{};CED=ed;
 el.innerHTML=`<div class="card">${c.f.map(([f,l,t,o])=>cmsField(f,l,t,o,r[f])).join('')}<div class="row"><button class="btn" onclick="cmsSave()">Salvar</button><button class="btn alt" onclick="cmsOpen('${k}')">Cancelar</button></div><p class="note" id="cmsg" role="status"></p></div>`}
 function expC(){const c=CMS[CK];csv(c.n,c.f.map(([f,l])=>[l.replace(/ \(.*\)/,''),f]),CROWS)}
@@ -307,13 +312,25 @@ const LOGIN_DOMINIO='ide-atletas.com.br';const toEmail=v=>{v=String(v||'').trim(
 async function login2(e){e.preventDefault();if(!sb){lmsg(noSb);return false}
 const {data,error}=await sb.auth.signInWithPassword({email:toEmail($('#lu2').value),password:$('#lp2').value});
 if(error){lmsg('Login/e-mail ou senha incorretos.');return false}$('#lp2').value='';await setMe(data.session);const destino=want==='matricula'?'matricula':STAFF.includes(PAPEL)?'adm':IS_ATLETA?'atleta':'matricula';want='inicio';location.hash='#'+destino;route();return false}
-async function signup(){if(!sb)return lmsg(noSb);const em=$('#lu2').value.trim(),pw=$('#lp2').value;if(!em.includes('@')||pw.length<8)return lmsg('Informe o seu e-mail e uma senha de 8 ou mais caracteres.');
-const {data,error}=await sb.auth.signUp({email:em,password:pw});if(error)return lmsg('Não foi possível criar a conta: '+error.message);lmsg(data.session?'Conta criada.':'Conta criada. Confirme pelo e-mail enviado e depois entre.')}
-async function resetPw(){if(!sb)return lmsg(noSb);const em=$('#lu2').value.trim();if(!em.includes('@'))return lmsg('Digite seu e-mail e toque de novo.');
-const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});lmsg(error?'Não foi possível enviar: '+error.message:'Enviamos um link de recuperação para o seu e-mail.')}
+function lmode(m){['login','signup','reset'].forEach(k=>{$('#lm-'+k).hidden=k!==m});lmsg('');const f=$('#lm-'+m).querySelector('input');if(f)f.focus()}
+async function signup(e){if(e)e.preventDefault();if(!sb){lmsg(noSb);return false}const em=$('#su_e').value.trim().toLowerCase(),pw=$('#su_p').value;
+if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){lmsg('Informe um e-mail válido.');return false}
+if(pw.length<8){lmsg('A senha precisa ter 8 ou mais caracteres.');return false}
+if(pw!==$('#su_p2').value){lmsg('As senhas não conferem.');return false}
+lmsg('Criando a conta…');const {data,error}=await sb.auth.signUp({email:em,password:pw});
+if(error){lmsg(/registered|exists/i.test(error.message)?'Este e-mail já tem conta. Toque em "Já tenho conta" e entre, ou use "Esqueci a senha".':'Não foi possível criar a conta: '+error.message);return false}
+if(!data.session){lmsg('Conta criada. Confirme pelo link enviado ao seu e-mail e depois entre.');return false}
+$('#su_p').value=$('#su_p2').value='';await setMe(data.session);location.hash='#matricula';route();return false}
+async function resetPw(e){if(e)e.preventDefault();if(!sb){lmsg(noSb);return false}const em=$('#rs_e').value.trim().toLowerCase();
+if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){lmsg('Digite o e-mail da sua conta.');return false}
+lmsg('Enviando…');const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
+lmsg(error?(/rate limit/i.test(error.message)?'Muitos pedidos agora. Tente de novo em alguns minutos ou fale com o IDE.':'Não foi possível enviar: '+error.message):'Se este e-mail tiver conta, enviamos um link para criar uma nova senha. Olhe também o spam.');return false}
+async function novaSenha(e){e.preventDefault();const p=$('#ns_p').value,m=$('#ns_m');if(p.length<8){m.textContent='A senha precisa ter 8 ou mais caracteres.';return false}if(p!==$('#ns_p2').value){m.textContent='As senhas não conferem.';return false}
+m.textContent='Salvando…';const {error}=await sb.auth.updateUser({password:p});if(error){m.textContent='Não foi possível trocar: '+error.message;return false}
+RECOV=false;$('#ns_p').value=$('#ns_p2').value='';m.textContent='';const {data}=await sb.auth.getSession();await setMe(data.session);location.hash=STAFF.includes(PAPEL)?'#adm':IS_ATLETA?'#atleta':'#matricula';route();return false}
 function logout(){if(sb)sb.auth.signOut();ME=null;PAPEL=null;OK=false;IS_ATLETA=false;want='inicio';location.hash='#inicio';route()}
 async function setMe(ses){ME=ses?ses.user:null;PAPEL=null;IS_ATLETA=false;if(ME){const {data}=await sb.from('perfis').select('papel').eq('id',ME.id).maybeSingle();PAPEL=data?data.papel:'atleta';if(!STAFF.includes(PAPEL)){const r=await sb.from('matriculas').select('id').or('dono.eq.'+ME.id+',atleta_user.eq.'+ME.id).limit(1);IS_ATLETA=!!(r.data&&r.data.length)}}OK=!!ME;route()}
-async function initAuth(){if(!sb)return;const {data}=await sb.auth.getSession();await setMe(data.session);sb.auth.onAuthStateChange((_e,ses)=>{setTimeout(()=>setMe(ses),0)})}
+async function initAuth(){if(!sb)return;const {data}=await sb.auth.getSession();await setMe(data.session);sb.auth.onAuthStateChange((ev,ses)=>{if(ev==='PASSWORD_RECOVERY')RECOV=true;setTimeout(()=>setMe(ses),0)})}
 async function loadAt(){const el=$('#atbox');if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre para ver sua matrícula</b></div>';return}el.textContent='Carregando…';
 const {data,error}=await sb.from('matriculas').select('*').or('dono.eq.'+ME.id+',atleta_user.eq.'+ME.id).order('criado',{ascending:false});
 if(error){el.innerHTML='<div class="empty"><b>Não foi possível carregar</b>Tente de novo em instantes.</div>';return}
