@@ -60,9 +60,9 @@ const foto=await up('foto','foto'),cert=await up('dCert','certidao'),res=await u
 const {error}=await sb.from('matriculas').insert({protocolo:proto,nome:V.nome,nascimento:V.nasc,rg:V.rg,cpf:V.cpf,cep:V.cep||null,responsavel:V.resp,whatsapp:V.zap,email:V.email||null,pai:{nome:V.pai||null,rg:V.paiRg||null,cpf:V.paiCpf||null},mae:{nome:V.mae||null,rg:V.maeRg||null,cpf:V.maeCpf||null},categoria:V.cat||null,posicao:V.pos||null,clube_anterior:V.clube||null,foto_path:foto,docs_paths:{cert,res,esc:esc2},consentimento:!!V.c1,uso_imagem:!!V.c2});
 if(error)throw error;saved=true}catch(e){erro=e.message||'erro desconhecido'}}
 if(sb&&!saved){m.textContent='Não foi possível registrar a matrícula: '+erro+' Seus dados continuam na tela.';return}
-V={};s=0;draw();
+V={};s=0;draw();if(saved){IS_ATLETA=true;route()}
 const wa=z?`<br><a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${z}?text=${encodeURIComponent(msg)}">${saved?'Avisar o IDE pelo WhatsApp':'Enviar matrícula ao IDE pelo WhatsApp'}</a>`:'';
-if(saved)m.innerHTML=`Matrícula registrada. Protocolo <b>${proto}</b>. A comissão técnica vai analisar e aceitar ou recusar. Sua conta já foi criada: entre com o e-mail e a senha que você escolheu para acompanhar o status. Depois da aprovação, o atleta recebe um login e uma senha próprios.${wa}`;
+if(saved)m.innerHTML=`Matrícula registrada. Protocolo <b>${proto}</b>. A comissão técnica vai analisar e aceitar ou recusar. Sua conta já foi criada: entre com o e-mail e a senha que você escolheu para acompanhar o status. Depois da aprovação, o atleta recebe um login e uma senha próprios.<br><a class="btn" href="#atleta">Ver minha matrícula</a>${wa}`;
 else m.innerHTML=z?`Protocolo <b>${proto}</b>.${wa}<br>Toque no botão para mandar os dados e anexe as fotos na conversa. A matrícula só é validada após esse envio.`:`Protocolo <b>${proto}</b>. O WhatsApp do IDE ainda não foi cadastrado: avise a direção e envie este resumo:<div class="code">${esc(msg).replace(/\n/g,'<br>')}</div>`}
 $('#bp').onclick=()=>{s--;$('#fm').textContent='';draw()};
 $('#bn').onclick=()=>{if(!stepOk())return;if(s<F.length-1){s++;draw()}else send()};
@@ -80,7 +80,7 @@ const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','
 $('#side').innerHTML=M.map((m,i)=>`<button data-i="${i}">${m}</button>`).join('');
 let cur=0,sel=null,MAT=[],unsub=null;
 async function pend(){if(!sb||!ME||!['admin','secretaria','treinador'].includes(PAPEL))return;const r=await sb.from('matriculas').select('id',{count:'exact',head:true}).in('status',['Recebida','Em análise']);const b=document.querySelector('#side button[data-i="'+M.indexOf('Matrículas')+'"]');if(b)b.textContent='Matrículas'+(r.count?' ('+r.count+' a decidir)':'')}
-function adm(i){pend();cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
+function adm(i){if(!STAFF.includes(PAPEL))return;pend();cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
 let h=`<h3>${M[i]}</h3>`;
 if(M[i]==='Dashboard'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(dash),0)}
 else if(M[i]==='Entradas e saídas'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(cash),0)}
@@ -307,13 +307,14 @@ const {data,error}=await sb.auth.signUp({email:em,password:pw});if(error)return 
 async function resetPw(){if(!sb)return lmsg(noSb);const em=$('#lu2').value.trim();if(!em.includes('@'))return lmsg('Digite seu e-mail e toque de novo.');
 const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});lmsg(error?'Não foi possível enviar: '+error.message:'Enviamos um link de recuperação para o seu e-mail.')}
 function logout(){if(sb)sb.auth.signOut();ME=null;PAPEL=null;OK=false;IS_ATLETA=false;want='inicio';location.hash='#inicio';route()}
-async function setMe(ses){ME=ses?ses.user:null;PAPEL=null;IS_ATLETA=false;if(ME){const {data}=await sb.from('perfis').select('papel').eq('id',ME.id).maybeSingle();PAPEL=data?data.papel:'atleta';if(!STAFF.includes(PAPEL)){const r=await sb.from('matriculas').select('id').eq('atleta_user',ME.id).eq('status','Aprovada').limit(1);IS_ATLETA=!!(r.data&&r.data.length)}}OK=!!ME;route()}
+async function setMe(ses){ME=ses?ses.user:null;PAPEL=null;IS_ATLETA=false;if(ME){const {data}=await sb.from('perfis').select('papel').eq('id',ME.id).maybeSingle();PAPEL=data?data.papel:'atleta';if(!STAFF.includes(PAPEL)){const r=await sb.from('matriculas').select('id').or('dono.eq.'+ME.id+',atleta_user.eq.'+ME.id).limit(1);IS_ATLETA=!!(r.data&&r.data.length)}}OK=!!ME;route()}
 async function initAuth(){if(!sb)return;const {data}=await sb.auth.getSession();await setMe(data.session);sb.auth.onAuthStateChange((_e,ses)=>{setTimeout(()=>setMe(ses),0)})}
 async function loadAt(){const el=$('#atbox');if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre para ver sua matrícula</b></div>';return}el.textContent='Carregando…';
 const {data,error}=await sb.from('matriculas').select('*').or('dono.eq.'+ME.id+',atleta_user.eq.'+ME.id).order('criado',{ascending:false});
 if(error){el.innerHTML='<div class="empty"><b>Não foi possível carregar</b>Tente de novo em instantes.</div>';return}
 if(!data.length){el.innerHTML='<div class="empty"><b>Nenhuma matrícula nesta conta</b>Faça a pré-matrícula na aba Matrícula.</div>';return}
-let h='';for(const r of data){const m=mapM(r);m.foto=await sUrl(m.fotoPath);h+=`<p>Protocolo <b>${esc(m.proto)}</b> · Status: <span class="badge">${esc(m.status)}</span></p>${cartH(m)}`}el.innerHTML=h+'<p class="note">Treinos na Arena Ribamar, a partir das 18h50.</p>'}
+const MSG={'Recebida':'Recebemos a matrícula. A comissão técnica vai analisar. Volte aqui para acompanhar.','Em análise':'A comissão técnica está analisando a matrícula.','Aguardando documentos':'Faltam documentos. Fale com o IDE pelo WhatsApp para enviar.','Recusada':'A matrícula não foi aceita. Fale com o IDE para saber o motivo.','Arquivada':'Esta matrícula foi arquivada.','Aprovada':'Matrícula aprovada! Veja abaixo a carteirinha do atleta.'};
+let h='';for(const r of data){const m=mapM(r);m.foto=await sUrl(m.fotoPath);h+=`<div class="card" style="margin-bottom:12px"><p>Atleta <b>${esc(m.nome)}</b> · Protocolo <b>${esc(m.proto)}</b></p><p>Status: <span class="badge">${esc(m.status)}</span></p><p>${MSG[m.status]||''}</p>${m.status==='Aprovada'?(m.login?`<p class="note">Login do atleta: <b>${esc(m.login)}</b>. A senha foi entregue pela secretaria.</p>`:'')+cartH(m):''}</div>`}el.innerHTML=h+'<p class="note">Treinos na Arena Ribamar, a partir das 18h50.</p>'}
 document.querySelector('.gal').onclick=e=>{const b=e.target.closest('.gi');if(!b)return;const i=b.querySelector('img');$('#lbi').src=i.src;$('#lbi').alt=i.alt;$('#lb').showModal()};$('#lbx').onclick=()=>$('#lb').close();$('#lb').onclick=e=>{if(e.target.id==='lb')e.target.close()};
 renderPay();
 initAuth();pubLoad();payFetch();
