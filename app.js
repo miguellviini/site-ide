@@ -2,7 +2,7 @@ const $=s=>document.querySelector(s);
 const STAFF=['admin','secretaria','financeiro','treinador','comunicacao'];
 let OK=false,want='inicio',ME=null,PAPEL=null,sb=null,IS_ATLETA=false;
 try{const C=window.IDE_CONFIG||{};if(C.SUPABASE_URL&&C.SUPABASE_KEY&&window.supabase)sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_KEY,{auth:{storage:window.sessionStorage}})}catch(x){}
-function route(){let h=(location.hash||'#inicio').slice(1);if(['adm','atleta','matricula'].includes(h)&&!OK){want=h;h='login'}if(h==='adm'&&OK&&!STAFF.includes(PAPEL))h='inicio';if(h==='atleta'&&OK&&!IS_ATLETA)h='inicio';$('#nav-login').hidden=OK;$('#nav-sair').hidden=!OK;$('#nav a[href="#adm"]').hidden=!OK||!STAFF.includes(PAPEL);$('#nav a[href="#atleta"]').hidden=!OK||!IS_ATLETA;const v=$('#v-'+h)||$('#v-inicio');document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e===v));document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v.id.slice(2)));scrollTo(0,0);if(h==='atleta')loadAt()}
+function route(){let h=(location.hash||'#inicio').slice(1);if(['adm','atleta'].includes(h)&&!OK){want=h;h='login'}if(h==='adm'&&OK&&!STAFF.includes(PAPEL))h='inicio';if(h==='atleta'&&OK&&!IS_ATLETA)h='inicio';$('#nav-login').hidden=OK;$('#nav-sair').hidden=!OK;$('#nav a[href="#adm"]').hidden=!OK||!STAFF.includes(PAPEL);$('#nav a[href="#atleta"]').hidden=!OK||!IS_ATLETA;const v=$('#v-'+h)||$('#v-inicio');document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e===v));document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v.id.slice(2)));scrollTo(0,0);if(h==='atleta')loadAt()}
 addEventListener('hashchange',route);route();
 // Matrícula
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -35,21 +35,25 @@ F[s][1].forEach(([k,l,t])=>{if(t==='chk')h+=`<label><input type="checkbox" style
 else if(t==='img')h+=`<label>${l}<input type="file" accept="image/*" onchange="pick('${k}',this)"></label><p class="note" id="n_${k}">${V[k]?'Imagem anexada.':''}</p>`;
 else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`${k==='cat'?'list="dlcat" ':''}oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
 if(F[s][1].some(x=>x[0]==='cat'))h+=`<datalist id="dlcat">${CATN.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`;
-if(s===F.length-1)h+=`<p>Atleta: <b>${esc(V.nome)}</b><br>Responsável: <b>${esc(V.resp)}</b></p><p class="note">Confira os dados. Ao enviar, você recebe um protocolo e abre a conversa com o WhatsApp do IDE já com os dados da matrícula.</p>${(sb&&!ME)?'<label>Crie uma senha de acesso (8 ou mais caracteres)<input type="password" autocomplete="new-password" oninput="V.senha=this.value"></label>':''}`;
+if(s===F.length-1)h+=`<p>Atleta: <b>${esc(V.nome)}</b><br>Responsável: <b>${esc(V.resp)}</b></p><p class="note">Confira os dados. Ao enviar, você recebe um protocolo e abre a conversa com o WhatsApp do IDE já com os dados da matrícula.</p>${(sb&&!ME)?`<div class="card"><h3>Crie o seu acesso</h3><p class="note">Seu login será o e-mail <b>${esc(V.email||'(volte e informe o e-mail do responsável)')}</b>. Com ele você acompanha a matrícula depois.</p><label>Senha (8 ou mais caracteres)<input type="password" autocomplete="new-password" oninput="V.senha=this.value"></label><label>Repita a senha<input type="password" autocomplete="new-password" oninput="V.senha2=this.value"></label></div>`:''}`;
 $('#fs').innerHTML=h;$('#bp').style.visibility=s?'visible':'hidden';$('#bn').textContent=s===F.length-1?'Enviar pré-matrícula':'Continuar'}
-function stepOk(){for(const [k] of F[s][1]){if(REQ[k]&&!V[k]){$('#fm').textContent='Preencha: '+REQ[k]+'.';return false}if(/cpf$/i.test(k)&&V[k]&&!cpfOk(V[k])){$('#fm').textContent='O CPF informado não é válido. Confira os números.';return false}}if(s===0&&V.nasc){const d=new Date(V.nasc),h=new Date();if(d>h||d.getFullYear()<h.getFullYear()-60){$('#fm').textContent='Confira a data de nascimento.';return false}}
+function stepOk(){if(sb&&!ME&&F[s][1].some(x=>x[0]==='email')&&!V.email){$('#fm').textContent='Informe o e-mail: ele será o login da conta.';return false}
+for(const [k] of F[s][1]){if(REQ[k]&&!V[k]){$('#fm').textContent='Preencha: '+REQ[k]+'.';return false}if(/cpf$/i.test(k)&&V[k]&&!cpfOk(V[k])){$('#fm').textContent='O CPF informado não é válido. Confira os números.';return false}}if(s===0&&V.nasc){const d=new Date(V.nasc),h=new Date();if(d>h||d.getFullYear()<h.getFullYear()-60){$('#fm').textContent='Confira a data de nascimento.';return false}}
 if(V.zap&&!/^\d{10,11}$/.test(V.zap.replace(/\D/g,''))){$('#fm').textContent='WhatsApp: informe DDD e número (10 ou 11 dígitos).';return false}
 if(V.cep&&V.cep.replace(/\D/g,'').length!==8){$('#fm').textContent='O CEP precisa ter 8 números.';return false}
 if(V.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(V.email)){$('#fm').textContent='Confira o e-mail.';return false}
 $('#fm').textContent='';return true}
 function waMsg(proto){const g=k=>V[k]||'—';return `*Pré-matrícula IDE* ${proto}\nAtleta: ${g('nome')}\nNascimento: ${fd(V.nasc)}\nRG: ${g('rg')} | CPF: ${g('cpf')} | CEP: ${g('cep')}\nResponsável: ${g('resp')} (${g('zap')}) ${V.email||''}\nPai: ${g('pai')} | RG ${g('paiRg')} | CPF ${g('paiCpf')}\nMãe: ${g('mae')} | RG ${g('maeRg')} | CPF ${g('maeCpf')}\nPosição: ${g('pos')} | Categoria: ${g('cat')} | Clube anterior: ${g('clube')}\nUso de imagem autorizado: ${V.c2?'sim':'não'}\n\nVou enviar em seguida as fotos: atleta, certidão ou RG, comprovante de residência e de escolaridade.`}
 const toBlob=async d=>(await fetch(d)).blob();
-async function send(){const m=$('#fm');if(!sb||!ME){m.textContent='Entre na sua conta antes de enviar a matrícula.';want='matricula';location.hash='#login';return}m.textContent='Enviando…';
+async function send(){const m=$('#fm');if(!sb){m.textContent=noSb;return}
+if(!ME){if(!V.email){m.textContent='Informe o e-mail do responsável (etapa Responsável): ele será o seu login.';return}
+if(!V.senha||V.senha.length<8){m.textContent='Crie uma senha de 8 ou mais caracteres.';return}
+if(V.senha!==V.senha2){m.textContent='As senhas não conferem.';return}}
+m.textContent='Enviando…';
 const proto='IDE-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
 const msg=waMsg(proto),z=String(PAY.whats||'').replace(/\D/g,'');let saved=false,erro='';
 if(sb){try{
-if(!ME){if(!V.email||!V.senha||V.senha.length<8)throw new Error('Informe o e-mail (etapa Responsável) e crie uma senha de 8 ou mais caracteres.');
-const r=await sb.auth.signUp({email:V.email,password:V.senha});if(r.error)throw r.error;if(!r.data.session)throw new Error('Conta criada. Confirme o e-mail recebido, entre no site e envie a matrícula de novo.')}
+if(!ME){const r=await sb.auth.signUp({email:V.email,password:V.senha});if(r.error){if(/registered|exists/i.test(r.error.message))throw new Error('Este e-mail já tem conta. Toque em Entrar, faça o login e envie a matrícula de novo.');throw r.error}if(!r.data.session)throw new Error('Conta criada. Confirme o e-mail recebido, entre no site e envie a matrícula de novo.')}
 const uid=(await sb.auth.getUser()).data.user.id;
 const up=async(k,nome)=>{if(!V[k])return null;const pa=`${uid}/${proto}-${nome}.jpg`;const {error}=await sb.storage.from('documentos').upload(pa,await toBlob(V[k]),{contentType:'image/jpeg',upsert:true});if(error)throw error;return pa};
 const foto=await up('foto','foto'),cert=await up('dCert','certidao'),res=await up('dRes','residencia'),esc2=await up('dEsc','escolaridade');
@@ -58,7 +62,7 @@ if(error)throw error;saved=true}catch(e){erro=e.message||'erro desconhecido'}}
 if(sb&&!saved){m.textContent='Não foi possível registrar a matrícula: '+erro+' Seus dados continuam na tela.';return}
 V={};s=0;draw();
 const wa=z?`<br><a class="btn" target="_blank" rel="noopener" href="https://wa.me/55${z}?text=${encodeURIComponent(msg)}">${saved?'Avisar o IDE pelo WhatsApp':'Enviar matrícula ao IDE pelo WhatsApp'}</a>`:'';
-if(saved)m.innerHTML=`Matrícula registrada. Protocolo <b>${proto}</b>. A secretaria vai analisar. Você acompanha o status entrando com o seu e-mail; depois da aprovação, o atleta recebe um login e uma senha próprios.${wa}`;
+if(saved)m.innerHTML=`Matrícula registrada. Protocolo <b>${proto}</b>. A comissão técnica vai analisar e aceitar ou recusar. Sua conta já foi criada: entre com o e-mail e a senha que você escolheu para acompanhar o status. Depois da aprovação, o atleta recebe um login e uma senha próprios.${wa}`;
 else m.innerHTML=z?`Protocolo <b>${proto}</b>.${wa}<br>Toque no botão para mandar os dados e anexe as fotos na conversa. A matrícula só é validada após esse envio.`:`Protocolo <b>${proto}</b>. O WhatsApp do IDE ainda não foi cadastrado: avise a direção e envie este resumo:<div class="code">${esc(msg).replace(/\n/g,'<br>')}</div>`}
 $('#bp').onclick=()=>{s--;$('#fm').textContent='';draw()};
 $('#bn').onclick=()=>{if(!stepOk())return;if(s<F.length-1){s++;draw()}else send()};
@@ -75,7 +79,8 @@ if(r.error){n.textContent='Erro: '+r.error.message;return}if(!v)$('#tx_'+k).valu
 const M=['Dashboard','Entradas e saídas','Atletas','Matrículas','Categorias','Comissão técnica','Treinos e presença','Jogos','Notícias','Avisos','Galeria','Patrocinadores','Sócios','Pagamentos','Financeiro','Transparência','Loja','Eventos','Frases do carrossel','Textos do site','Usuários','Auditoria'];
 $('#side').innerHTML=M.map((m,i)=>`<button data-i="${i}">${m}</button>`).join('');
 let cur=0,sel=null,MAT=[],unsub=null;
-function adm(i){cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
+async function pend(){if(!sb||!ME||!['admin','secretaria','treinador'].includes(PAPEL))return;const r=await sb.from('matriculas').select('id',{count:'exact',head:true}).in('status',['Recebida','Em análise']);const b=document.querySelector('#side button[data-i="'+M.indexOf('Matrículas')+'"]');if(b)b.textContent='Matrículas'+(r.count?' ('+r.count+' a decidir)':'')}
+function adm(i){pend();cur=i;document.querySelectorAll('#side button').forEach((b,j)=>b.classList.toggle('on',j==i));
 let h=`<h3>${M[i]}</h3>`;
 if(M[i]==='Dashboard'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(dash),0)}
 else if(M[i]==='Entradas e saídas'){h+='<div id="cx">Carregando…</div>';setTimeout(()=>cashLoad(cash),0)}
