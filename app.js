@@ -15,7 +15,7 @@ const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nasciment
 ['Documentos (foto nítida de cada um)',[['dCert','Certidão de nascimento ou RG','img'],['dRes','Comprovante de residência','img'],['dEsc','Comprovante de escolaridade','img']]],
 ['Consentimentos',[['c1','Li a <a href="#privacidade" target="_blank">Política de privacidade</a> e autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
 ['Confirmação',[]]];
-const REQ={foto:'a foto do atleta',dCert:'a foto da certidão de nascimento ou do RG',nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
+const REQ={foto:'a foto do atleta',nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
 let s=0,V={},CATN=[];
 // CSV para Excel pt-BR (; e BOM). Células que começam com = + - @ ganham ' para não virarem fórmula.
 function csv(nome,cols,rows){const q=v=>{v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
