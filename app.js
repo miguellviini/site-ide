@@ -45,6 +45,11 @@ if(V.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(V.email)){$('#fm').textContent='C
 $('#fm').textContent='';return true}
 function waMsg(proto){const g=k=>V[k]||'—';return `*Pré-matrícula IDE* ${proto}\nAtleta: ${g('nome')}\nNascimento: ${fd(V.nasc)}\nRG: ${g('rg')} | CPF: ${g('cpf')} | CEP: ${g('cep')}\nResponsável: ${g('resp')} (${g('zap')}) ${V.email||''}\nPai: ${g('pai')} | RG ${g('paiRg')} | CPF ${g('paiCpf')}\nMãe: ${g('mae')} | RG ${g('maeRg')} | CPF ${g('maeCpf')}\nPosição: ${g('pos')} | Categoria: ${g('cat')} | Clube anterior: ${g('clube')}\nUso de imagem autorizado: ${V.c2?'sim':'não'}\n\nVou enviar em seguida as fotos: atleta, certidão ou RG, comprovante de residência e de escolaridade.`}
 const toBlob=async d=>(await fetch(d)).blob();
+const JAEXISTE='Este e-mail já tem conta. Toque em Entrar, faça o login e envie a matrícula de novo.';
+async function criaConta(){let ok=false,msg='';try{const {data,error}=await sb.functions.invoke('criar-conta',{body:{email:V.email,senha:V.senha}});
+if(error){let j=null;try{j=await error.context.json()}catch(e){}if(j&&j.erro==='existe')throw new Error(JAEXISTE);if(j&&j.erro)throw new Error(j.erro);msg='fn'}else if(data&&data.ok)ok=true}catch(e){if(e.message!=='fn'&&e.message!==undefined&&!/Failed to send|fetch|not found|NOT_FOUND/i.test(e.message))throw e;msg='fn'}
+if(ok){const r=await sb.auth.signInWithPassword({email:V.email,password:V.senha});if(r.error)throw r.error;await setMe(r.data.session);return}
+const r=await sb.auth.signUp({email:V.email,password:V.senha});if(r.error){if(/registered|exists/i.test(r.error.message))throw new Error(JAEXISTE);throw r.error}if(r.data.session)await setMe(r.data.session)}
 async function send(){const m=$('#fm');if(!sb){m.textContent=noSb;return}
 if(!ME){if(!V.email){m.textContent='Informe o e-mail do responsável (etapa Responsável): ele será o seu login.';return}
 if(!V.senha||V.senha.length<8){m.textContent='Crie uma senha de 8 ou mais caracteres.';return}
@@ -53,7 +58,7 @@ m.textContent='Enviando…';
 const proto='IDE-'+Date.now().toString(36).toUpperCase()+Math.random().toString(36).slice(2,5).toUpperCase();
 const msg=waMsg(proto),z=String(PAY.whats||'').replace(/\D/g,'');let saved=false,erro='';
 if(sb){try{
-if(!ME){const r=await sb.auth.signUp({email:V.email,password:V.senha});if(r.error){if(/registered|exists/i.test(r.error.message))throw new Error('Este e-mail já tem conta. Toque em Entrar, faça o login e envie a matrícula de novo.');throw r.error}if(!r.data.session)throw new Error('Conta criada. Confirme o e-mail recebido, entre no site e envie a matrícula de novo.')}
+if(!ME){await criaConta();if(!ME)throw new Error('Conta criada. Confirme o e-mail recebido, entre no site e envie a matrícula de novo.')}
 const uid=(await sb.auth.getUser()).data.user.id;
 const up=async(k,nome)=>{if(!V[k])return null;const pa=`${uid}/${proto}-${nome}.jpg`;const {error}=await sb.storage.from('documentos').upload(pa,await toBlob(V[k]),{contentType:'image/jpeg',upsert:true});if(error)throw error;return pa};
 const foto=await up('foto','foto'),cert=await up('dCert','certidao'),res=await up('dRes','residencia'),esc2=await up('dEsc','escolaridade');
