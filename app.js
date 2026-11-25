@@ -320,7 +320,7 @@ if(pw!==$('#su_p2').value){lmsg('As senhas não conferem.');return false}
 lmsg('Criando a conta…');const {data,error}=await sb.auth.signUp({email:em,password:pw});
 if(error){lmsg(/registered|exists/i.test(error.message)?'Este e-mail já tem conta. Toque em "Já tenho conta" e entre, ou use "Esqueci a senha".':'Não foi possível criar a conta: '+error.message);return false}
 if(!data.session){lmsg('Conta criada. Confirme pelo link enviado ao seu e-mail e depois entre.');return false}
-$('#su_p').value=$('#su_p2').value='';await setMe(data.session);location.hash='#matricula';route();return false}
+$('#su_p').value=$('#su_p2').value='';lmsg('');await setMe(data.session);location.hash='#matricula';route();return false}
 async function resetPw(e){if(e)e.preventDefault();if(!sb){lmsg(noSb);return false}const em=$('#rs_e').value.trim().toLowerCase();
 if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)){lmsg('Digite o e-mail da sua conta.');return false}
 lmsg('Enviando…');const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
