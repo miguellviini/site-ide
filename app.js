@@ -84,17 +84,19 @@ async function txSave(k,reset){const v=reset?'':$('#tx_'+k).value.trim(),n=$('#t
 if(r.error){n.textContent='Erro: '+r.error.message;return}if(!v)$('#tx_'+k).value=DEF[k]||'';n.textContent=v?'Salvo.':'Restaurado.';pubLoad()}
 // Recuperação de senha (só admin): pedidos feitos em "Esqueci a senha"
 let PED=[],USR=[],MW={};
-const dig=v=>String(v||'').replace(/\D/g,''),gerSenha=()=>{const c='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint32Array(10)),x=>c[x%c.length]).join('')};
-async function senhasLoad(ver){const [p,u,m]=await Promise.all([sb.from('pedidos_senha').select('*').order('criado',{ascending:false}).limit(60),sb.rpc('lista_usuarios'),sb.from('matriculas').select('dono,atleta_user,whatsapp')]);
+const norm=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z ]/g,' ').split(/\s+/).filter(Boolean),
+igualNome=(a,b)=>{const x=norm(a),y=norm(b);return x.length>1&&y.length>1&&x[0]===y[0]&&x[x.length-1]===y[y.length-1]},
+dig=v=>String(v||'').replace(/\D/g,''),gerSenha=()=>{const c='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from(crypto.getRandomValues(new Uint32Array(10)),x=>c[x%c.length]).join('')};
+async function senhasLoad(ver){const [p,u,m]=await Promise.all([sb.from('pedidos_senha').select('*').order('criado',{ascending:false}).limit(60),sb.rpc('lista_usuarios'),sb.from('matriculas').select('dono,atleta_user,whatsapp,responsavel,nome')]);
 if(p.error||u.error||!u.data){$('#cx').innerHTML='<div class="empty"><b>Sem acesso</b>Só o administrador vê os pedidos de senha (rode o SQL 20 no Supabase).</div>';return}
-USR=u.data;MW={};(m.data||[]).forEach(x=>[x.dono,x.atleta_user].filter(Boolean).forEach(k=>{MW[k]=x}));PED=p.data;senhasRender(ver)}
+USR=u.data;MW={};(m.data||[]).forEach(x=>[x.dono,x.atleta_user].filter(Boolean).forEach(k=>{(MW[k]=MW[k]||[]).push(x)}));PED=p.data;senhasRender(ver)}
 function senhasRender(ver){const pend=PED.filter(x=>x.status==='pendente'),res=PED.filter(x=>x.status!=='pendente');
-const linha=p=>{const em=toEmail(p.identificador).toLowerCase(),c=USR.find(x=>x.email.toLowerCase()===em),mt=c&&MW[c.id],zm=mt&&mt.whatsapp,igual=zm&&dig(zm).slice(-9)===dig(p.whatsapp).slice(-9);
+const linha=p=>{const em=toEmail(p.identificador).toLowerCase(),c=USR.find(x=>x.email.toLowerCase()===em),ms=(c&&MW[c.id])||[],zm=ms[0]&&ms[0].whatsapp,igual=ms.some(x=>x.whatsapp&&dig(x.whatsapp).slice(-9)===dig(p.whatsapp).slice(-9)),nomes=[...new Set(ms.flatMap(x=>[x.responsavel,x.nome]).filter(Boolean))],nomeOk=!!p.nome&&nomes.some(n=>igualNome(n,p.nome));
 let ac;if(p.status!=='pendente')ac='<span class="badge">resolvido</span>';
 else if(!c)ac='<p class="note">Nenhuma conta com esse login ou e-mail. Confira com a pessoa ou dispense o pedido.</p><button class="btn alt" onclick="pedOk(\''+p.id+'\')">Dispensar</button>';
 else if(c.protegido)ac='<p class="note">Conta do administrador principal: a senha só ele mesmo troca.</p><button class="btn alt" onclick="pedOk(\''+p.id+'\')">Dispensar</button>';
 else ac=`<label>Nova senha<input id="np_${p.id}" value="${gerSenha()}"></label><div class="row"><button class="btn" onclick="pedSalvar('${p.id}','${c.id}')">Definir nova senha</button><button class="btn alt" onclick="pedOk('${p.id}')">Dispensar</button></div>`;
-return `<div class="card" id="ped_${p.id}" style="margin-bottom:10px"><p><b>${esc(p.identificador)}</b> <span class="note">${dh(p.criado)}</span></p><p>WhatsApp informado: <b>${esc(p.whatsapp)}</b></p>${c&&p.status==='pendente'?(zm?`<p class="note">WhatsApp da matrícula: ${esc(zm)}</p>${igual?'':'<p class="note"><b>Atenção:</b> o WhatsApp informado é diferente do da matrícula. Confirme com o responsável antes de passar a senha.</p>'}`:'<p class="note">Esta conta não tem matrícula para conferir o WhatsApp. Confirme a identidade antes de passar a senha.</p>'):''}<div id="pa_${p.id}">${ac}</div></div>`};
+return `<div class="card" id="ped_${p.id}" style="margin-bottom:10px"><p><b>${esc(p.identificador)}</b> <span class="note">${dh(p.criado)}</span></p><p>Nome informado: <b>${esc(p.nome||'(não informado)')}</b></p><p>WhatsApp informado: <b>${esc(p.whatsapp)}</b></p>${c&&p.status==='pendente'?(ms.length?`<p class="note">Na matrícula: ${nomes.map(esc).join(' · ')||'—'} · WhatsApp ${esc(zm||'—')}</p>${nomeOk&&igual?'<p class="note"><b>Confere:</b> o nome e o WhatsApp batem com a matrícula.</p>':`<p class="note"><b>Atenção:</b> ${nomeOk?'':'o nome não bate com o da matrícula'}${!nomeOk&&!igual?' e ':''}${igual?'':'o WhatsApp é diferente do da matrícula'}. Confirme com o responsável antes de passar a senha.</p>`}`:'<p class="note">Esta conta não tem matrícula para conferir nome e WhatsApp. Confirme a identidade antes de passar a senha.</p>'):''}<div id="pa_${p.id}">${ac}</div></div>`};
 $('#cx').innerHTML=(pend.length?pend.map(linha).join(''):'<div class="empty"><b>Nenhum pedido pendente</b>Quando alguém usar "Esqueci a senha" no site, o pedido aparece aqui.</div>')+(res.length?`<p style="margin-top:14px"><button class="btn alt" onclick="senhasRender(${ver?0:1})">${ver?'Ocultar':'Ver'} resolvidos (${res.length})</button></p>${ver?res.map(linha).join(''):''}`:'')+'<p class="note">Antes de passar uma senha nova, confirme que quem pediu é o dono da conta (ex.: ligue para o número da matrícula).</p>'}
 async function pedOk(id){await sb.from('pedidos_senha').update({status:'resolvido',resolvido_em:new Date().toISOString()}).eq('id',id);senhasLoad();pend0()}
 async function pedSalvar(id,uid){const sn=$('#np_'+id).value.trim(),p=PED.find(x=>x.id===id),box=$('#pa_'+id);if(sn.length<8){alert('A senha precisa ter 8 ou mais caracteres.');return}
@@ -344,12 +346,13 @@ lmsg('Criando a conta…');const {data,error}=await sb.auth.signUp({email:em,pas
 if(error){lmsg(/registered|exists/i.test(error.message)?'Este e-mail já tem conta. Toque em "Já tenho conta" e entre, ou use "Esqueci a senha".':'Não foi possível criar a conta: '+error.message);return false}
 if(!data.session){lmsg('Conta criada. Confirme pelo link enviado ao seu e-mail e depois entre.');return false}
 $('#su_p').value=$('#su_p2').value='';lmsg('');await setMe(data.session);location.hash='#matricula';route();return false}
-async function pedirSenha(e){e.preventDefault();if(!sb){lmsg(noSb);return false}const id=$('#rs_e').value.trim().slice(0,120),z=$('#rs_z').value.trim();
+async function pedirSenha(e){e.preventDefault();if(!sb){lmsg(noSb);return false}const nome=$('#rs_n').value.trim().replace(/\s+/g,' ').slice(0,120),id=$('#rs_e').value.trim().slice(0,120),z=$('#rs_z').value.trim();
+if(nome.length<5||!nome.includes(' ')){lmsg('Informe o seu nome completo (nome e sobrenome).');return false}
 if(id.length<3){lmsg('Informe o seu login ou e-mail.');return false}
 if(!/^\d{10,11}$/.test(z.replace(/\D/g,''))){lmsg('Informe o WhatsApp com DDD: é por ele que a secretaria vai avisar você.');return false}
-lmsg('Enviando…');const {error}=await sb.from('pedidos_senha').insert({identificador:id,whatsapp:z});
+lmsg('Enviando…');const {error}=await sb.from('pedidos_senha').insert({identificador:id,whatsapp:z,nome});
 if(error&&error.code!=='23505'){lmsg('Não foi possível enviar o pedido agora. Fale com o IDE pelo WhatsApp.');return false}
-$('#rs_e').value=$('#rs_z').value='';lmsg('Pedido enviado! A secretaria vai definir uma nova senha e avisar você pelo WhatsApp informado.');return false}
+$('#rs_n').value=$('#rs_e').value=$('#rs_z').value='';lmsg('Pedido enviado! A secretaria vai definir uma nova senha e avisar você pelo WhatsApp informado.');return false}
 async function novaSenha(e){e.preventDefault();const p=$('#ns_p').value,m=$('#ns_m');if(p.length<8){m.textContent='A senha precisa ter 8 ou mais caracteres.';return false}if(p!==$('#ns_p2').value){m.textContent='As senhas não conferem.';return false}
 m.textContent='Salvando…';const {error}=await sb.auth.updateUser({password:p});if(error){m.textContent='Não foi possível trocar: '+error.message;return false}
 RECOV=false;$('#ns_p').value=$('#ns_p2').value='';m.textContent='';const {data}=await sb.auth.getSession();await setMe(data.session);location.hash=STAFF.includes(PAPEL)?'#adm':IS_ATLETA?'#atleta':'#matricula';route();return false}

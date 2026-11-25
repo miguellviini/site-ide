@@ -392,3 +392,6 @@ grant select, update, delete on public.pedidos_senha to authenticated;
 drop trigger if exists audita on public.pedidos_senha;
 create trigger audita after insert or update or delete on public.pedidos_senha for each row execute function public.registra_auditoria();
 notify pgrst, 'reload schema';
+-- IDE · o pedido de senha passa a guardar o nome da pessoa (para o admin conferir com a matrícula). Rode DEPOIS do 20.
+alter table public.pedidos_senha add column if not exists nome text check (nome is null or char_length(nome) between 3 and 120);
+notify pgrst, 'reload schema';
