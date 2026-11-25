@@ -58,3 +58,14 @@ main{padding-top:28px} .card{box-shadow:0 5px 22px rgba(0,0,0,.035)} .btn{min-he
 .skip{position:absolute;left:-999px;top:8px;background:var(--acc,#e8b923);color:#111;padding:10px 16px;border-radius:8px;z-index:99;font-weight:700}.skip:focus{left:8px}
 footer a{display:inline-block;padding:14px 6px;min-height:44px;box-sizing:border-box}
 main:focus{outline:none}
+
+/* menu agrupado */
+nav{align-items:center}
+.ng{position:relative}.ng>summary{list-style:none;cursor:pointer;color:#fff;padding:8px 12px;border-radius:99px;font-size:.95rem;opacity:.9;white-space:nowrap;min-height:40px;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box}
+.ng>summary::-webkit-details-marker{display:none}.ng>summary::after{content:"";width:6px;height:6px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .15s}
+.ng[open]>summary::after{transform:rotate(-135deg) translateY(-2px)}.ng>summary:hover,.ng[open]>summary,.ng.on>summary{background:rgba(255,255,255,.16);opacity:1}
+.ng>summary:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.gm{position:absolute;left:0;top:calc(100% + 6px);min-width:210px;background:var(--hd);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:40;box-shadow:0 12px 30px rgba(0,0,0,.35)}
+.gm a{padding:11px 14px;border-radius:10px;min-height:44px;box-sizing:border-box;display:flex;align-items:center}
+@media(max-width:759px){nav{flex-wrap:wrap;overflow:visible}.ng[open]{flex:1 1 100%}.gm{position:static;margin-top:6px;box-shadow:none;min-width:0}nav a{flex:0 0 auto}}
+.skip{z-index:99}
