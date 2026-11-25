@@ -1,6 +1,6 @@
 const $=s=>document.querySelector(s);
 const STAFF=['admin','secretaria','financeiro','treinador','comunicacao'];
-let RECOV=false,OK=false,want='inicio',ME=null,PAPEL=null,sb=null,IS_ATLETA=false;
+let RECOV=/[#&]type=recovery/.test(location.hash),OK=false,want='inicio',ME=null,PAPEL=null,sb=null,IS_ATLETA=false;
 try{const C=window.IDE_CONFIG||{};if(C.SUPABASE_URL&&C.SUPABASE_KEY&&window.supabase)sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_KEY,{auth:{storage:window.sessionStorage}})}catch(x){}
 function route(){let h=(location.hash||'#inicio').slice(1);if(RECOV)h='novasenha';if(['adm','atleta'].includes(h)&&!OK){want=h;h='login'}if(h==='adm'&&OK&&!STAFF.includes(PAPEL))h='inicio';if(h==='atleta'&&OK&&!IS_ATLETA)h='inicio';$('#nav-login').hidden=OK;$('#nav-sair').hidden=!OK;$('#nav a[href="#adm"]').hidden=!OK||!STAFF.includes(PAPEL);$('#nav a[href="#atleta"]').hidden=!OK||!IS_ATLETA;const v=document.getElementById('v-'+h)||$('#v-inicio');document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e===v));document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+v.id.slice(2)));document.querySelectorAll('#nav .ng').forEach(g=>{g.classList.toggle('on',!!g.querySelector('a.on'));g.open=false});scrollTo(0,0);if(h==='atleta')loadAt()}
 addEventListener('hashchange',route);route();
