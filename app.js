@@ -7,15 +7,15 @@ addEventListener('hashchange',route);route();
 // Matrícula
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fd=v=>v?v.split('-').reverse().join('/'):'—';
-const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nascimento','date'],['rg','RG'],['cpf','CPF'],['cep','CEP'],['foto','Foto do atleta (para a carteirinha)','img']]],
+const F=[['Dados do atleta',[['nome','Nome completo'],['nasc','Data de nascimento','date'],['rg','RG'],['cpf','CPF'],['cep','CEP'],['sexo','Sexo do atleta','sel',['Masculino','Feminino']],['foto','Foto do atleta (para a carteirinha)','img']]],
 ['Responsável',[['resp','Nome do responsável'],['zap','WhatsApp com DDD','tel'],['email','E-mail','email']]],
 ['Pai',[['pai','Nome do pai'],['paiRg','RG do pai'],['paiCpf','CPF do pai']]],
 ['Mãe',[['mae','Nome da mãe'],['maeRg','RG da mãe'],['maeCpf','CPF da mãe']]],
-['Informações esportivas',[['pos','Posição'],['clube','Clube anterior (se houver)'],['cat','Categoria desejada']]],
+['Informações esportivas',[['pos','Posição'],['clube','Clube anterior (se houver)'],['cat','Categoria desejada','sel',[]]]],
 ['Documentos (foto nítida de cada um)',[['dCert','Certidão de nascimento ou RG','img'],['dRes','Comprovante de residência','img'],['dEsc','Comprovante de escolaridade','img']]],
 ['Consentimentos',[['c1','Li a <a href="#privacidade" target="_blank">Política de privacidade</a> e autorizo o tratamento dos dados do atleta (LGPD).','chk'],['c2','Autorizo o uso de imagem do atleta (opcional).','chk']]],
 ['Confirmação',[]]];
-const REQ={foto:'a foto do atleta',nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
+const REQ={sexo:'o sexo do atleta',foto:'a foto do atleta',nome:'nome do atleta',nasc:'data de nascimento',rg:'RG',cpf:'CPF',resp:'nome do responsável',zap:'WhatsApp',c1:'o consentimento LGPD'};
 let s=0,V={},CATN=[];
 // CSV para Excel pt-BR (; e BOM). Células que começam com = + - @ ganham ' para não virarem fórmula.
 function csv(nome,cols,rows){const q=v=>{v=v==null?'':String(v);if(/^[=+\-@\t\r]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
@@ -31,10 +31,10 @@ async function pick(k,el){const f=el.files[0];if(!f)return;const n=$('#n_'+k);tr
 let _db;async function getDb(){if(_db)return _db;try{const c=window.claude&&await window.claude.use('db');if(c)_db=c}catch(e){}return _db}
 function draw(){if(ME&&!V.email&&F[s][1].some(x=>x[0]==='email'))V.email=ME.email||'';$('#st').innerHTML=F.map((_,i)=>`<i class="${i<=s?'on':''}"></i>`).join('');
 let h=`<h3>Etapa ${s+1} de ${F.length}: ${F[s][0]}</h3>`;
-F[s][1].forEach(([k,l,t])=>{if(t==='chk')h+=`<label><input type="checkbox" style="width:auto" ${V[k]?'checked':''} onchange="V.${k}=this.checked"> ${l}</label>`;
+F[s][1].forEach(([k,l,t,o])=>{if(t==='chk')h+=`<label><input type="checkbox" style="width:auto" ${V[k]?'checked':''} onchange="V.${k}=this.checked"> ${l}</label>`;
 else if(t==='img')h+=`<label>${l}<input type="file" accept="image/*" onchange="pick('${k}',this)"></label><p class="note" id="n_${k}">${V[k]?'Imagem anexada.':''}</p>`;
-else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`${k==='cat'?'list="dlcat" ':''}oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
-if(F[s][1].some(x=>x[0]==='cat'))h+=`<datalist id="dlcat">${CATN.map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`;
+else if(t==='sel')h+=`<label>${l}<select onchange="V.${k}=this.value"><option value="">Selecione</option>${(k==='cat'?CATN:o).map(x=>`<option${V[k]===x?' selected':''}>${esc(x)}</option>`).join('')}</select></label>`;
+else{const mk=maskOf(k);h+=`<label>${l}<input type="${t||'text'}" ${mk?`inputmode="numeric" autocomplete="off" oninput="this.value=MASK.${mk}(this.value);V.${k}=this.value"`:`oninput="V.${k}=this.value"`} value="${esc(V[k])}"></label>`}});
 if(s===F.length-1)h+=`<p>Atleta: <b>${esc(V.nome)}</b><br>Responsável: <b>${esc(V.resp)}</b></p><p class="note">Confira os dados. Ao enviar, você recebe um protocolo e abre a conversa com o WhatsApp do IDE já com os dados da matrícula.</p>${(sb&&!ME)?`<div class="card"><h3>Crie o seu acesso</h3><p class="note">Seu login será o e-mail <b>${esc(V.email||'(volte e informe o e-mail do responsável)')}</b>. Com ele você acompanha a matrícula depois.</p><label>Senha (8 ou mais caracteres)<input type="password" autocomplete="new-password" oninput="V.senha=this.value"></label><label>Repita a senha<input type="password" autocomplete="new-password" oninput="V.senha2=this.value"></label></div>`:''}`;
 $('#fs').innerHTML=h;$('#bp').style.visibility=s?'visible':'hidden';$('#bn').textContent=s===F.length-1?'Enviar pré-matrícula':'Continuar'}
 function stepOk(){if(sb&&!ME&&F[s][1].some(x=>x[0]==='email')&&!V.email){$('#fm').textContent='Informe o e-mail: ele será o login da conta.';return false}
@@ -43,7 +43,7 @@ if(V.zap&&!/^\d{10,11}$/.test(V.zap.replace(/\D/g,''))){$('#fm').textContent='Wh
 if(V.cep&&V.cep.replace(/\D/g,'').length!==8){$('#fm').textContent='O CEP precisa ter 8 números.';return false}
 if(V.email&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(V.email)){$('#fm').textContent='Confira o e-mail.';return false}
 $('#fm').textContent='';return true}
-function waMsg(proto){const g=k=>V[k]||'—';return `*Pré-matrícula IDE* ${proto}\nAtleta: ${g('nome')}\nNascimento: ${fd(V.nasc)}\nRG: ${g('rg')} | CPF: ${g('cpf')} | CEP: ${g('cep')}\nResponsável: ${g('resp')} (${g('zap')}) ${V.email||''}\nPai: ${g('pai')} | RG ${g('paiRg')} | CPF ${g('paiCpf')}\nMãe: ${g('mae')} | RG ${g('maeRg')} | CPF ${g('maeCpf')}\nPosição: ${g('pos')} | Categoria: ${g('cat')} | Clube anterior: ${g('clube')}\nUso de imagem autorizado: ${V.c2?'sim':'não'}\n\nVou enviar em seguida as fotos: atleta, certidão ou RG, comprovante de residência e de escolaridade.`}
+function waMsg(proto){const g=k=>V[k]||'—';return `*Pré-matrícula IDE* ${proto}\nAtleta: ${g('nome')}\nSexo: ${g('sexo')}\nNascimento: ${fd(V.nasc)}\nRG: ${g('rg')} | CPF: ${g('cpf')} | CEP: ${g('cep')}\nResponsável: ${g('resp')} (${g('zap')}) ${V.email||''}\nPai: ${g('pai')} | RG ${g('paiRg')} | CPF ${g('paiCpf')}\nMãe: ${g('mae')} | RG ${g('maeRg')} | CPF ${g('maeCpf')}\nPosição: ${g('pos')} | Categoria: ${g('cat')} | Clube anterior: ${g('clube')}\nUso de imagem autorizado: ${V.c2?'sim':'não'}\n\nVou enviar em seguida as fotos: atleta, certidão ou RG, comprovante de residência e de escolaridade.`}
 const toBlob=async d=>(await fetch(d)).blob();
 const JAEXISTE='Este e-mail já tem conta. Toque em Entrar, faça o login e envie a matrícula de novo.';
 async function criaConta(){let ok=false,msg='';try{const {data,error}=await sb.functions.invoke('criar-conta',{body:{email:V.email,senha:V.senha}});
@@ -63,7 +63,7 @@ if(!ME){await criaConta();if(!ME)throw new Error('Conta criada. Confirme o e-mai
 const uid=(await sb.auth.getUser()).data.user.id;
 const up=async(k,nome)=>{if(!V[k])return null;const pa=`${uid}/${proto}-${nome}.jpg`;const {error}=await sb.storage.from('documentos').upload(pa,await toBlob(V[k]),{contentType:'image/jpeg',upsert:true});if(error)throw error;return pa};
 const foto=await up('foto','foto'),cert=await up('dCert','certidao'),res=await up('dRes','residencia'),esc2=await up('dEsc','escolaridade');
-const {error}=await sb.from('matriculas').insert({protocolo:proto,nome:V.nome,nascimento:V.nasc,rg:V.rg,cpf:V.cpf,cep:V.cep||null,responsavel:V.resp,whatsapp:V.zap,email:V.email||null,pai:{nome:V.pai||null,rg:V.paiRg||null,cpf:V.paiCpf||null},mae:{nome:V.mae||null,rg:V.maeRg||null,cpf:V.maeCpf||null},categoria:V.cat||null,posicao:V.pos||null,clube_anterior:V.clube||null,foto_path:foto,docs_paths:{cert,res,esc:esc2},consentimento:!!V.c1,uso_imagem:!!V.c2});
+const {error}=await sb.from('matriculas').insert({protocolo:proto,nome:V.nome,nascimento:V.nasc,rg:V.rg,cpf:V.cpf,cep:V.cep||null,responsavel:V.resp,whatsapp:V.zap,email:V.email||null,pai:{nome:V.pai||null,rg:V.paiRg||null,cpf:V.paiCpf||null},mae:{nome:V.mae||null,rg:V.maeRg||null,cpf:V.maeCpf||null},categoria:V.cat||null,sexo:V.sexo||null,posicao:V.pos||null,clube_anterior:V.clube||null,foto_path:foto,docs_paths:{cert,res,esc:esc2},consentimento:!!V.c1,uso_imagem:!!V.c2});
 if(error)throw error;saved=true}catch(e){erro=e.message||'erro desconhecido'}}
 if(sb&&!saved){m.textContent='Não foi possível registrar a matrícula: '+erro+' Seus dados continuam na tela.';return}
 V={};s=0;draw();if(saved){IS_ATLETA=true;route()}
@@ -119,6 +119,7 @@ else if(M[i]==='Recuperação de senha'){h+='<div id="cx">Carregando…</div>';s
 else if(M[i]==='Usuários'){h+='<div id="cx">Carregando…</div>';setTimeout(usersLoad,0)}
 else if(M[i]==='Auditoria'){h+='<div id="cx">Carregando…</div>';setTimeout(audLoad,0)}
 else if(M[i]==='Pagamentos'){h+='<div id="cx">Carregando…</div>';setTimeout(payLoad,0)}
+else if(M[i]==='Atletas'){h+='<div id="cx">Carregando…</div>';setTimeout(atLoad,0)}
 else if(CMSM[M[i]]){h+='<div id="cms"></div>';setTimeout(()=>cmsOpen(CMSM[M[i]]),0)}
 else if(M[i]==='Matrículas'){h+='<div class="empty">Carregando matrículas…</div>';setTimeout(loadMat,0)}
 else h+=`<div class="empty"><b>Sem registros em ${M[i]}</b>Este módulo ainda não foi desenvolvido.</div>`;
@@ -126,7 +127,7 @@ $('#adp').innerHTML=h}
 $('#side').onclick=e=>{if(e.target.dataset.i)adm(+e.target.dataset.i)};adm(0);
 const ST=['Recebida','Em análise','Aguardando documentos','Aprovada','Recusada','Arquivada'];
 let MF={q:'',arq:false};
-const mapM=r=>{const p=r.pai||{},q=r.mae||{};return{id:r.id,proto:r.protocolo,status:r.status,nome:r.nome,nasc:r.nascimento,rg:r.rg,cpf:r.cpf,cep:r.cep,resp:r.responsavel,zap:r.whatsapp,email:r.email,pai:p.nome,paiRg:p.rg,paiCpf:p.cpf,mae:q.nome,maeRg:q.rg,maeCpf:q.cpf,pos:r.posicao,cat:r.categoria,clube:r.clube_anterior,c2:r.uso_imagem,fotoPath:r.foto_path,docs:r.docs_paths||{},login:r.login,atletaUser:r.atleta_user,criado:r.criado}};
+const mapM=r=>{const p=r.pai||{},q=r.mae||{};return{id:r.id,proto:r.protocolo,status:r.status,nome:r.nome,nasc:r.nascimento,rg:r.rg,cpf:r.cpf,cep:r.cep,resp:r.responsavel,zap:r.whatsapp,email:r.email,pai:p.nome,paiRg:p.rg,paiCpf:p.cpf,mae:q.nome,maeRg:q.rg,maeCpf:q.cpf,pos:r.posicao,cat:r.categoria,sexo:r.sexo,clube:r.clube_anterior,c2:r.uso_imagem,fotoPath:r.foto_path,docs:r.docs_paths||{},login:r.login,atletaUser:r.atleta_user,criado:r.criado}};
 const sUrl=async p=>{if(!sb||!p)return null;const {data}=await sb.storage.from('documentos').createSignedUrl(p,300);return data?data.signedUrl:null};
 async function loadMat(){const el=$('#adp');if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre para ver as matrículas</b></div>';return}
 if(!['admin','secretaria','treinador'].includes(PAPEL)){el.innerHTML='<div class="empty"><b>Sem permissão</b>Seu perfil não acessa as matrículas.</div>';return}
@@ -137,10 +138,10 @@ $('#adp').innerHTML=`<h3>Matrículas</h3><div class="row" style="margin:0 0 10px
 function mRows(){const q=MF.q.toLowerCase(),L=MAT.filter(x=>(MF.arq?x.status==='Arquivada':x.status!=='Arquivada')&&(!q||(x.nome+' '+x.proto+' '+(x.cat||'')).toLowerCase().includes(q)));
 $('#mrows').innerHTML=L.length?`<div class="scroll"><table><tr><th>Protocolo</th><th>Atleta</th><th>Categoria</th><th>Status</th></tr>${L.map(x=>`<tr style="cursor:pointer" onclick="sel='${esc(x.id)}';renderMat()"><td>${esc(x.proto)}</td><td>${esc(x.nome)}</td><td>${esc(x.cat||'—')}</td><td><span class="badge">${esc(x.status)}</span></td></tr>`).join('')}</table></div><p class="note">${L.length} matrícula(s). Toque em uma linha para ver os dados.</p>`:'<div class="empty"><b>Nenhuma matrícula</b>'+(MAT.length?'Nada encontrado com esse filtro.':'As pré-matrículas enviadas pelo formulário aparecem aqui.')+'</div>'}
 function expM(){if(!confirm('A planilha contém CPF, RG e contatos de menores e responsáveis (dados pessoais protegidos pela LGPD). Guarde em local seguro e não compartilhe. Baixar?'))return;
-csv('matriculas',[['Protocolo','proto'],['Status','status'],['Atleta','nome'],['Nascimento','nasc'],['RG','rg'],['CPF','cpf'],['CEP','cep'],['Categoria','cat'],['Posição','pos'],['Clube anterior','clube'],['Responsável','resp'],['WhatsApp','zap'],['E-mail','email'],['Pai','pai'],['Mãe','mae']],MAT)}
+csv('matriculas',[['Protocolo','proto'],['Status','status'],['Atleta','nome'],['Sexo','sexo'],['Nascimento','nasc'],['RG','rg'],['CPF','cpf'],['CEP','cep'],['Categoria','cat'],['Posição','pos'],['Clube anterior','clube'],['Responsável','resp'],['WhatsApp','zap'],['E-mail','email'],['Pai','pai'],['Mãe','mae']],MAT)}
 function det(m){const z=String(m.zap||'').replace(/\D/g,'');
 $('#adp').innerHTML=`<button class="btn alt" onclick="sel=null;renderMat()">Voltar</button><h3 style="margin-top:12px">${esc(m.nome)}</h3><div class="card"><p>Protocolo: <b>${esc(m.proto)}</b></p><label>Status<select onchange="setSt('${esc(m.id)}',this.value,this)">${ST.map(t=>`<option${t===m.status?' selected':''}>${t}</option>`).join('')}</select></label><div id="acs" style="margin:10px 0">${acessoH(m)}</div>
-<p>Nascimento: ${fd(m.nasc)}<br>RG: ${esc(m.rg)} · CPF: ${esc(m.cpf)} · CEP: ${esc(m.cep||'—')}</p>
+<p>Nascimento: ${fd(m.nasc)} · Sexo: ${esc(m.sexo||'—')}<br>RG: ${esc(m.rg)} · CPF: ${esc(m.cpf)} · CEP: ${esc(m.cep||'—')}</p>
 <p>Responsável: ${esc(m.resp)} · ${esc(m.zap)} ${esc(m.email)}</p>
 <p>Pai: ${esc(m.pai||'—')} · RG ${esc(m.paiRg||'—')} · CPF ${esc(m.paiCpf||'—')}<br>Mãe: ${esc(m.mae||'—')} · RG ${esc(m.maeRg||'—')} · CPF ${esc(m.maeCpf||'—')}</p>
 <p>Posição: ${esc(m.pos||'—')} · Categoria: ${esc(m.cat||'—')} · Clube anterior: ${esc(m.clube||'—')}<br>Uso de imagem autorizado: ${m.c2?'sim':'não'}</p>
@@ -165,27 +166,42 @@ function cartH(m){return `<div class="cart"><div class="ch"><img src="${document
 async function vdocs(){const m=MAT.find(x=>x.id===sel),o=[];
 for(const [n,l] of [['cert','Certidão ou RG'],['res','Comprovante de residência'],['esc','Comprovante de escolaridade']]){const u=await sUrl(m.docs[n]);if(u)o.push(`<p><b>${l}</b></p><img style="max-width:100%;border-radius:8px" src="${u}" alt="${l}">`)}
 $('#ext').innerHTML=o.join('')||'<p class="note">Nenhum documento anexado.</p>'}
-const MEF=[['nome','Nome completo'],['nasc','Data de nascimento','date'],['rg','RG'],['cpf','CPF'],['cep','CEP'],['resp','Responsável'],['zap','WhatsApp com DDD','tel'],['email','E-mail','email'],['pai','Nome do pai'],['paiRg','RG do pai'],['paiCpf','CPF do pai'],['mae','Nome da mãe'],['maeRg','RG da mãe'],['maeCpf','CPF da mãe'],['pos','Posição'],['cat','Categoria'],['clube','Clube anterior']];
+const MEF=[['nome','Nome completo'],['nasc','Data de nascimento','date'],['rg','RG'],['cpf','CPF'],['cep','CEP'],['resp','Responsável'],['zap','WhatsApp com DDD','tel'],['email','E-mail','email'],['pai','Nome do pai'],['paiRg','RG do pai'],['paiCpf','CPF do pai'],['mae','Nome da mãe'],['maeRg','RG da mãe'],['maeCpf','CPF da mãe'],['pos','Posição'],['cat','Categoria'],['sexo','Sexo','sel',['Masculino','Feminino']],['clube','Clube anterior']];
 function editM(){const m=MAT.find(x=>x.id===sel);if(!m)return;
-$('#adp').innerHTML=`<h3>Editar matrícula ${esc(m.proto)}</h3><div class="card">${MEF.map(([k,l,t])=>{const mk=maskOf(k);return `<label>${l}<input id="me_${k}" type="${t||'text'}" ${mk?`inputmode="numeric" oninput="this.value=MASK.${mk}(this.value)"`:''} value="${esc(m[k]||'')}"></label>`}).join('')}<div class="row"><button class="btn" onclick="saveM()">Salvar</button><button class="btn alt" onclick="renderMat()">Cancelar</button></div><p class="note" id="mem" role="status"></p></div>`}
+$('#adp').innerHTML=`<h3>Editar matrícula ${esc(m.proto)}</h3><div class="card">${MEF.map(([k,l,t,o])=>{const mk=maskOf(k);if(t==='sel')return `<label>${l}<select id="me_${k}"><option value=""></option>${o.map(x=>`<option${x===m[k]?' selected':''}>${x}</option>`).join('')}</select></label>`;return `<label>${l}<input id="me_${k}" type="${t||'text'}" ${mk?`inputmode="numeric" oninput="this.value=MASK.${mk}(this.value)"`:''} value="${esc(m[k]||'')}"></label>`}).join('')}<div class="row"><button class="btn" onclick="saveM()">Salvar</button><button class="btn alt" onclick="renderMat()">Cancelar</button></div><p class="note" id="mem" role="status"></p></div>`}
 async function saveM(){const m=MAT.find(x=>x.id===sel),g=k=>$('#me_'+k).value.trim(),n=$('#mem');
 if(!g('nome')||!g('nasc')){n.textContent='Preencha o nome e a data de nascimento.';return}
 for(const k of ['cpf','paiCpf','maeCpf'])if(g(k)&&!cpfOk(g(k))){n.textContent='CPF inválido: '+(k==='cpf'?'do atleta':k==='paiCpf'?'do pai':'da mãe')+'.';return}
 if(g('zap')&&!/^\d{10,11}$/.test(g('zap').replace(/\D/g,''))){n.textContent='WhatsApp: informe DDD e número.';return}
 if(g('cep')&&g('cep').replace(/\D/g,'').length!==8){n.textContent='O CEP precisa ter 8 números.';return}
-const nv=g=>g||null,row={nome:g('nome'),nascimento:g('nasc'),rg:nv(g('rg')),cpf:nv(g('cpf')),cep:nv(g('cep')),responsavel:nv(g('resp')),whatsapp:nv(g('zap')),email:nv(g('email')),pai:{nome:nv(g('pai')),rg:nv(g('paiRg')),cpf:nv(g('paiCpf'))},mae:{nome:nv(g('mae')),rg:nv(g('maeRg')),cpf:nv(g('maeCpf'))},posicao:nv(g('pos')),categoria:nv(g('cat')),clube_anterior:nv(g('clube')),atualizado:new Date().toISOString()};
+const nv=g=>g||null,row={nome:g('nome'),nascimento:g('nasc'),rg:nv(g('rg')),cpf:nv(g('cpf')),cep:nv(g('cep')),responsavel:nv(g('resp')),whatsapp:nv(g('zap')),email:nv(g('email')),pai:{nome:nv(g('pai')),rg:nv(g('paiRg')),cpf:nv(g('paiCpf'))},mae:{nome:nv(g('mae')),rg:nv(g('maeRg')),cpf:nv(g('maeCpf'))},posicao:nv(g('pos')),categoria:nv(g('cat')),sexo:nv(g('sexo')),clube_anterior:nv(g('clube')),atualizado:new Date().toISOString()};
 n.textContent='Salvando…';const {error}=await sb.from('matriculas').update(row).eq('id',m.id);
 if(error){n.textContent='Não foi possível salvar: '+error.message;return}
-Object.assign(m,{nome:row.nome,nasc:row.nascimento,rg:row.rg,cpf:row.cpf,cep:row.cep,resp:row.responsavel,zap:row.whatsapp,email:row.email,pai:row.pai.nome,paiRg:row.pai.rg,paiCpf:row.pai.cpf,mae:row.mae.nome,maeRg:row.mae.rg,maeCpf:row.mae.cpf,pos:row.posicao,cat:row.categoria,clube:row.clube_anterior});renderMat()}
+Object.assign(m,{nome:row.nome,nasc:row.nascimento,rg:row.rg,cpf:row.cpf,cep:row.cep,resp:row.responsavel,zap:row.whatsapp,email:row.email,pai:row.pai.nome,paiRg:row.pai.rg,paiCpf:row.pai.cpf,mae:row.mae.nome,maeRg:row.mae.rg,maeCpf:row.mae.cpf,pos:row.posicao,cat:row.categoria,sexo:row.sexo,clube:row.clube_anterior});renderMat()}
 async function delM(){const m=MAT.find(x=>x.id===sel);if(!m||!confirm('Excluir esta matrícula? Isso não pode ser desfeito.'))return;const ps=[m.fotoPath,...Object.values(m.docs)].filter(Boolean);
 const {error}=await sb.from('matriculas').delete().eq('id',m.id);if(error){alert('Não foi possível excluir: '+error.message);return}
 if(ps.length)await sb.storage.from('documentos').remove(ps);MAT=MAT.filter(x=>x.id!==m.id);sel=null;renderMat()}
+// Atletas (Adm): lê do banco, filtra por categoria, sexo e nome
+let AT=[],AF={cat:'',sexo:'',q:'',arq:false};
+const sem=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const catDe=a=>(a.categorias&&a.categorias.nome)||'Sem categoria';
+async function atLoad(){if(!sb||!ME){$('#cx').innerHTML='<div class="empty"><b>Entre para ver</b></div>';return}
+const {data,error}=await sb.from('atletas').select('id,nome_publico,sexo,posicao,categorias(nome),matriculas(status)').order('nome_publico');
+if(error){$('#cx').innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se aparecer "column sexo does not exist", rode o SQL da correção no Supabase.</div>';return}AT=data;atRender()}
+function atRender(){const cs=[...new Set(AT.map(catDe))].sort();
+$('#cx').innerHTML=`<div class="row" style="margin:0 0 10px;align-items:end"><label style="flex:1;min-width:150px">Categoria<select onchange="AF.cat=this.value;atRows()"><option value="">Todas</option>${cs.map(c=>`<option${c===AF.cat?' selected':''}>${esc(c)}</option>`).join('')}</select></label><label style="flex:1;min-width:130px">Sexo<select onchange="AF.sexo=this.value;atRows()"><option value="">Todos</option><option${AF.sexo==='Masculino'?' selected':''}>Masculino</option><option${AF.sexo==='Feminino'?' selected':''}>Feminino</option><option value="-"${AF.sexo==='-'?' selected':''}>Não informado</option></select></label><label style="flex:2;min-width:180px">Buscar pelo nome<input value="${esc(AF.q)}" oninput="AF.q=this.value;atRows()"></label></div><div class="row" style="margin:0 0 10px"><label style="width:auto"><input type="checkbox" style="width:auto" ${AF.arq?'checked':''} onchange="AF.arq=this.checked;atRows()"> Mostrar recusadas e arquivadas</label><button class="btn alt" onclick="atLoad()">Atualizar</button><button class="btn alt" onclick="atEdit(null)">Adicionar manualmente</button></div><div id="atrows"></div>`;atRows()}
+function atRows(){const q=sem(AF.q),L=AT.filter(a=>{const st=a.matriculas&&a.matriculas.status;return(AF.arq||!['Recusada','Arquivada'].includes(st))&&(!AF.cat||catDe(a)===AF.cat)&&(!AF.sexo||(AF.sexo==='-'?!a.sexo:a.sexo===AF.sexo))&&(!q||sem(a.nome_publico).includes(q))}),G={};
+L.forEach(a=>(G[catDe(a)]=G[catDe(a)]||[]).push(a));
+const cs=Object.keys(G).sort((a,b)=>(a==='Sem categoria')-(b==='Sem categoria')||a.localeCompare(b));
+const SX=[['Masculino','Masculino'],['Feminino','Feminino'],['','Sexo não informado']];
+$('#atrows').innerHTML=cs.length?cs.map(c=>`<h3 style="margin-top:14px">${esc(c)} <span class="note">(${G[c].length})</span></h3>`+SX.map(([v,t])=>{const l=G[c].filter(a=>(a.sexo||'')===v);return l.length?`<p class="note" style="margin:8px 0 4px"><b>${t}</b> · ${l.length}</p><div class="scroll"><table><tr><th>Atleta</th><th>Posição</th><th>Status</th><th></th></tr>${l.map(a=>`<tr><td>${esc(a.nome_publico)}</td><td>${esc(a.posicao||'—')}</td><td><span class="badge">${esc((a.matriculas&&a.matriculas.status)||'cadastro manual')}</span></td><td><button class="btn alt" style="padding:4px 10px" onclick="atEdit('${a.id}')">Editar</button></td></tr>`).join('')}</table></div>`:''}).join('')).join('')+`<p class="note">${L.length} atleta(s).</p>`:'<div class="empty"><b>Nenhum atleta</b>'+(AT.length?'Nada encontrado com esse filtro.':'As matrículas enviadas aparecem aqui automaticamente.')+'</div>'}
+async function atEdit(id){$('#adp').innerHTML='<h3>Atletas</h3><div id="cms"></div>';await cmsOpen('atletas');cmsOpen('atletas',id)}
 // CMS: o painel ADM controla o conteúdo do site
 const CMSM={'Atletas':'atletas','Categorias':'categorias','Comissão técnica':'comissao','Treinos e presença':'treinos','Jogos':'jogos','Notícias':'noticias','Avisos':'avisos','Galeria':'galeria','Eventos':'eventos','Sócios':'socios','Loja':'loja','Transparência':'transp','Frases do carrossel':'frases','Patrocinadores':'patrocinadores'};
 const DIAS=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const PUB=['publicado','Publicar no site','bool'];
 const CMS={
-atletas:{n:'atletas',o:'nome_publico',r:'nome_publico',f:[['nome_publico','Nome (como aparece no site)'],['camisa','Número da camisa','num'],['posicao','Posição','sel',['Goleiro','Defensor','Meio-campo','Atacante']],['foto_path','Foto','img'],['publicado','Publicar no elenco (só com autorização do responsável)','bool']]},
+atletas:{n:'atletas',o:'nome_publico',r:'nome_publico',f:[['nome_publico','Nome (como aparece no site)'],['sexo','Sexo','sel',['Masculino','Feminino']],['camisa','Número da camisa','num'],['posicao','Posição','sel',['Goleiro','Defensor','Meio-campo','Atacante']],['foto_path','Foto','img'],['publicado','Publicar no elenco (só com autorização do responsável)','bool']]},
 categorias:{n:'categorias',o:'nome',r:'nome',f:[['nome','Categoria (ex.: Sub-11)'],['treinador','Treinador'],['local_treino','Local de treino'],['horarios','Horários'],['ativa','Categoria ativa','bool']]},
 comissao:{n:'comissao',o:'nome',r:'nome',f:[['nome','Nome'],['funcao','Função'],['foto_path','Foto','img'],PUB]},
 treinos:{n:'treinos',o:'dia',r:'dia',f:[['dia','Dia da semana','sel',DIAS],['categoria','Categoria'],['horario','Horário (ex.: 18h50 às 22h00)'],['local','Local'],['obs','Observação'],PUB]},
@@ -257,7 +273,7 @@ const pc=x=>`<div class="card" style="margin-bottom:8px">${x.logo_path?`<img src
 fill('home-patro',pa.map(pc).join(''));
 fill('pub-treinos',tr.length?`<section><h3>Agenda de treinos</h3><div class="scroll"><table><tr><th>Dia</th><th>Horário</th><th>Categoria</th><th>Local</th></tr>${tr.map(t=>`<tr><td>${esc(t.dia)}</td><td>${esc(t.horario||'')}</td><td>${esc(t.categoria||'')}</td><td>${esc(t.local||'')}${t.obs?' · '+esc(t.obs):''}</td></tr>`).join('')}</table></div></section>`:'');
 fill('home-eventos',ev.filter(e=>!e.data_hora||new Date(e.data_hora)>=Date.now()-864e5).map(e=>`<div class="card" style="margin-bottom:8px"><h3>${esc(e.titulo)}</h3><p class="note">${dh(e.data_hora)} ${esc(e.local||'')}</p><p>${esc(e.descricao||'')}</p></div>`).join(''));
-txApply(tx&&tx.data);if(window.setFrases&&fr.length)setFrases(fr.map(x=>x.texto));CATN=ca.map(x=>x.nome);
+txApply(tx&&tx.data);if(window.setFrases&&fr.length)setFrases(fr.map(x=>x.texto));CATN=ca.map(x=>x.nome);if(F[s][1].some(x=>x[0]==='cat'))draw();
 const rr=rs&&rs.data&&rs.data[0];
 fill('pub-transp',`<div class="grid"><div class="card"><h3>Total arrecadado</h3><p>${brl(Number(rr?rr.entradas:0))}</p></div><div class="card"><h3>Total investido</h3><p>${brl(Number(rr?rr.saidas:0))}</p></div></div>`+(td.length?'<h3 style="margin-top:14px">Relatórios</h3>'+td.map(d=>`<div class="card" style="margin-bottom:8px"><b>${d.link?`<a href="${esc(d.link)}" target="_blank" rel="noopener">${esc(d.titulo)}</a>`:esc(d.titulo)}</b> <span class="note">${d.ano||''}</span></div>`).join(''):''));
 fill('pub-loja',lj.length?`<div class="grid">${lj.map(p=>`<div class="card">${p.foto_path?`<img src="${pu(p.foto_path)}" alt="${esc(p.nome)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<h3>${esc(p.nome)}</h3><p class="price">${p.preco!=null?brl(Number(p.preco)):'Consulte'}</p><p class="note">${esc(p.descricao||'')}</p></div>`).join('')}</div>`:'');
@@ -383,3 +399,4 @@ window.__ide_ok=true;
 // menu agrupado: fecha ao clicar fora ou em um item; abre só um grupo por vez
 document.addEventListener('click',e=>{document.querySelectorAll('#nav .ng[open]').forEach(g=>{if(!g.contains(e.target)||e.target.closest('.gm a'))g.open=false})});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('#nav .ng[open]').forEach(g=>g.open=false)});
+
