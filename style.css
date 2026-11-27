@@ -87,3 +87,5 @@ nav{align-items:center}
 .adl{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0 0 14px}.adl dt{color:var(--mut)}.adl dd{margin:0;font-weight:600}
 @media(max-width:759px){.al{flex-wrap:wrap}.an{display:none}.aac{margin-left:0;width:100%;justify-content:flex-end}.adt{min-width:0}}
 @media(prefers-reduced-motion:reduce){.chip,.ib,.al{transition:none}}
+
+.chip.vazio:not(.on){color:var(--mut);border-style:dashed}
