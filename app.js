@@ -188,13 +188,14 @@ const catDe=a=>(a.categorias&&a.categorias.nome)||'Sem categoria';
 const sexoDe=a=>a.sexo||(a.matriculas&&a.matriculas.sexo)||'';
 const idade=d=>{if(!d)return '';const n=new Date(d),h=new Date();let y=h.getFullYear()-n.getFullYear();if(h<new Date(h.getFullYear(),n.getMonth(),n.getDate()))y--;return y};
 const catOrd=n=>{const m=/(\d+)/.exec(n);return n==='Sem categoria'?[3,0]:m?[0,+m[1]]:[1,0]};
+const ordCat=l=>(l||[]).slice().sort((x,y)=>{const p=catOrd(x.nome),q=catOrd(y.nome);return p[0]-q[0]||p[1]-q[1]||x.nome.localeCompare(y.nome)});
 const ICO={eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'};
 const ic=k=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
 const ini=n=>String(n||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 async function atLoad(){if(!sb||!ME){$('#cx').innerHTML='<div class="empty"><b>Entre para ver</b></div>';return}
 const [r,cs]=await Promise.all([sb.from('atletas').select('id,nome_publico,sexo,posicao,camisa,foto_path,publicado,categoria_id,matricula_id,categorias(nome),matriculas(status,nascimento,foto_path,sexo)').order('nome_publico'),sb.from('categorias').select('id,nome').order('nome')]);
 if(r.error){$('#cx').innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(r.error.message)+'</div>';return}
-AT=r.data;CATADM=cs.data||[];AVU={};
+AT=r.data;CATADM=ordCat(cs.data);AVU={};
 // foto do atleta: a do elenco (pública) ou, se não houver, a da matrícula (link temporário)
 const falta=AT.filter(x=>!x.foto_path&&x.matriculas&&x.matriculas.foto_path).map(x=>x.matriculas.foto_path);
 if(falta.length){const s=await sb.storage.from('documentos').createSignedUrls(falta,3600);(s.data||[]).forEach(x=>{if(x.signedUrl)AVU[x.path]=x.signedUrl})}
@@ -251,7 +252,7 @@ if(t==='img')return `${v?`<img src="${pu(v)}" alt="Foto atual" style="max-width:
 if(t==='dt'){const d=v?new Date(v):null;const z=d?new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16):'';return `<label>${l}<input id="${id}" type="datetime-local" value="${z}"></label>`}
 return `<label>${l}<input id="${id}" ${t==='num'?'type="number" inputmode="numeric"':t==='dec'?'inputmode="decimal"':''} value="${esc(v)}"></label>`}
 async function cmsOpen(k,ed){CK=k;const c=CMS[k],el=$('#cms');if(k==='atletas'&&ed===undefined){atBack();return}
-if(k==='atletas'&&!CATADM.length){const q=await sb.from('categorias').select('id,nome').order('nome');CATADM=q.data||[]}
+if(k==='atletas'&&!CATADM.length){const q=await sb.from('categorias').select('id,nome').order('nome');CATADM=ordCat(q.data)}
 if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre com o Supabase configurado</b>O conteúdo é salvo no banco de dados.</div>';return}
 if(ed===undefined){const {data,error}=await sb.from(c.n).select('*').order(c.o,{ascending:!c.desc});
 if(error){el.innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se a tabela não existe, rode o arquivo supabase/sql/04-complemento.sql no Supabase.</div>';return}
