@@ -181,27 +181,49 @@ Object.assign(m,{nome:row.nome,nasc:row.nascimento,rg:row.rg,cpf:row.cpf,cep:row
 async function delM(){const m=MAT.find(x=>x.id===sel);if(!m||!confirm('Excluir esta matrícula? Isso não pode ser desfeito.'))return;const ps=[m.fotoPath,...Object.values(m.docs)].filter(Boolean);
 const {error}=await sb.from('matriculas').delete().eq('id',m.id);if(error){alert('Não foi possível excluir: '+error.message);return}
 if(ps.length)await sb.storage.from('documentos').remove(ps);MAT=MAT.filter(x=>x.id!==m.id);sel=null;renderMat()}
-// Atletas (Adm): lê do banco, filtra por categoria, sexo e nome
-let AT=[],AF={cat:'',sexo:'',q:'',arq:false};
-const sem=v=>String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+// Atletas (Adm): por categoria, com foto, ver / editar / excluir
+let AT=[],AF={cat:'',sexo:'',q:'',arq:false},CATADM=[],AVU={};
+const sem=v=>String(v||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const catDe=a=>(a.categorias&&a.categorias.nome)||'Sem categoria';
+const sexoDe=a=>a.sexo||(a.matriculas&&a.matriculas.sexo)||'';
+const idade=d=>{if(!d)return '';const n=new Date(d),h=new Date();let y=h.getFullYear()-n.getFullYear();if(h<new Date(h.getFullYear(),n.getMonth(),n.getDate()))y--;return y};
+const catOrd=n=>{const m=/(\d+)/.exec(n);return n==='Sem categoria'?[3,0]:m?[0,+m[1]]:[1,0]};
+const ICO={eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',pen:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>',trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>'};
+const ic=k=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
+const ini=n=>String(n||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
 async function atLoad(){if(!sb||!ME){$('#cx').innerHTML='<div class="empty"><b>Entre para ver</b></div>';return}
-const {data,error}=await sb.from('atletas').select('id,nome_publico,sexo,posicao,categorias(nome),matriculas(status)').order('nome_publico');
-if(error){$('#cx').innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se aparecer "column sexo does not exist", rode o SQL da correção no Supabase.</div>';return}AT=data;atRender()}
-function atRender(){const cs=[...new Set(AT.map(catDe))].sort();
-$('#cx').innerHTML=`<div class="row" style="margin:0 0 10px;align-items:end"><label style="flex:1;min-width:150px">Categoria<select onchange="AF.cat=this.value;atRows()"><option value="">Todas</option>${cs.map(c=>`<option${c===AF.cat?' selected':''}>${esc(c)}</option>`).join('')}</select></label><label style="flex:1;min-width:130px">Sexo<select onchange="AF.sexo=this.value;atRows()"><option value="">Todos</option><option${AF.sexo==='Masculino'?' selected':''}>Masculino</option><option${AF.sexo==='Feminino'?' selected':''}>Feminino</option><option value="-"${AF.sexo==='-'?' selected':''}>Não informado</option></select></label><label style="flex:2;min-width:180px">Buscar pelo nome<input value="${esc(AF.q)}" oninput="AF.q=this.value;atRows()"></label></div><div class="row" style="margin:0 0 10px"><label style="width:auto"><input type="checkbox" style="width:auto" ${AF.arq?'checked':''} onchange="AF.arq=this.checked;atRows()"> Mostrar recusadas e arquivadas</label><button class="btn alt" onclick="atLoad()">Atualizar</button><button class="btn alt" onclick="atEdit(null)">Adicionar manualmente</button></div><div id="atrows"></div>`;atRows()}
-function atRows(){const q=sem(AF.q),L=AT.filter(a=>{const st=a.matriculas&&a.matriculas.status;return(AF.arq||!['Recusada','Arquivada'].includes(st))&&(!AF.cat||catDe(a)===AF.cat)&&(!AF.sexo||(AF.sexo==='-'?!a.sexo:a.sexo===AF.sexo))&&(!q||sem(a.nome_publico).includes(q))}),G={};
-L.forEach(a=>(G[catDe(a)]=G[catDe(a)]||[]).push(a));
-const cs=Object.keys(G).sort((a,b)=>(a==='Sem categoria')-(b==='Sem categoria')||a.localeCompare(b));
-const SX=[['Masculino','Masculino'],['Feminino','Feminino'],['','Sexo não informado']];
-$('#atrows').innerHTML=cs.length?cs.map(c=>`<h3 style="margin-top:14px">${esc(c)} <span class="note">(${G[c].length})</span></h3>`+SX.map(([v,t])=>{const l=G[c].filter(a=>(a.sexo||'')===v);return l.length?`<p class="note" style="margin:8px 0 4px"><b>${t}</b> · ${l.length}</p><div class="scroll"><table><tr><th>Atleta</th><th>Posição</th><th>Status</th><th></th></tr>${l.map(a=>`<tr><td>${esc(a.nome_publico)}</td><td>${esc(a.posicao||'—')}</td><td><span class="badge">${esc((a.matriculas&&a.matriculas.status)||'cadastro manual')}</span></td><td><button class="btn alt" style="padding:4px 10px" onclick="atEdit('${a.id}')">Editar</button></td></tr>`).join('')}</table></div>`:''}).join('')).join('')+`<p class="note">${L.length} atleta(s).</p>`:'<div class="empty"><b>Nenhum atleta</b>'+(AT.length?'Nada encontrado com esse filtro.':'As matrículas enviadas aparecem aqui automaticamente.')+'</div>'}
+const [r,cs]=await Promise.all([sb.from('atletas').select('id,nome_publico,sexo,posicao,camisa,foto_path,publicado,categoria_id,matricula_id,categorias(nome),matriculas(status,nascimento,foto_path,sexo)').order('nome_publico'),sb.from('categorias').select('id,nome').order('nome')]);
+if(r.error){$('#cx').innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(r.error.message)+'</div>';return}
+AT=r.data;CATADM=cs.data||[];AVU={};
+// foto do atleta: a do elenco (pública) ou, se não houver, a da matrícula (link temporário)
+const falta=AT.filter(x=>!x.foto_path&&x.matriculas&&x.matriculas.foto_path).map(x=>x.matriculas.foto_path);
+if(falta.length){const s=await sb.storage.from('documentos').createSignedUrls(falta,3600);(s.data||[]).forEach(x=>{if(x.signedUrl)AVU[x.path]=x.signedUrl})}
+atRender()}
+const atFoto=a=>a.foto_path?pu(a.foto_path):(a.matriculas&&AVU[a.matriculas.foto_path])||'';
+function atRender(){const cnt={};AT.forEach(a=>{const k=catDe(a);cnt[k]=(cnt[k]||0)+1});const ks=Object.keys(cnt).sort((x,y)=>{const p=catOrd(x),q=catOrd(y);return p[0]-q[0]||p[1]-q[1]||x.localeCompare(y)});
+$('#cx').innerHTML=`<div class="chips" role="group" aria-label="Filtrar por categoria"><button class="chip${AF.cat?'':' on'}" onclick="AF.cat='';atRender()">Todas <b>${AT.length}</b></button>${ks.map(k=>`<button class="chip${AF.cat===k?' on':''}" data-k="${esc(k)}" onclick="AF.cat=this.dataset.k;atRender()">${esc(k)} <b>${cnt[k]}</b></button>`).join('')}</div>
+<div class="row" style="margin:0 0 12px;align-items:end"><label style="flex:2;min-width:170px">Buscar pelo nome<input value="${esc(AF.q)}" oninput="AF.q=this.value;atRows()"></label><label style="flex:1;min-width:130px">Sexo<select onchange="AF.sexo=this.value;atRows()"><option value="">Todos</option><option${AF.sexo==='Masculino'?' selected':''}>Masculino</option><option${AF.sexo==='Feminino'?' selected':''}>Feminino</option><option value="-"${AF.sexo==='-'?' selected':''}>Não informado</option></select></label><label style="width:auto"><input type="checkbox" style="width:auto" ${AF.arq?'checked':''} onchange="AF.arq=this.checked;atRows()"> Recusadas e arquivadas</label></div>
+<div class="row" style="margin:0 0 6px"><button class="btn" onclick="atEdit(null)">Adicionar atleta</button><button class="btn alt" onclick="atExp()">Exportar planilha</button><button class="btn alt" onclick="atLoad()">Atualizar</button></div><div id="atrows"></div>`;atRows()}
+function atFiltrados(){const q=sem(AF.q);return AT.filter(a=>{const st=a.matriculas&&a.matriculas.status,sx=sexoDe(a);return(AF.arq||!['Recusada','Arquivada'].includes(st))&&(!AF.cat||catDe(a)===AF.cat)&&(!AF.sexo||(AF.sexo==='-'?!sx:sx===AF.sexo))&&(!q||sem(a.nome_publico).includes(q))})}
+function atRows(){const L=atFiltrados(),G={};L.forEach(a=>(G[catDe(a)]=G[catDe(a)]||[]).push(a));
+const ks=Object.keys(G).sort((x,y)=>{const p=catOrd(x),q=catOrd(y);return p[0]-q[0]||p[1]-q[1]||x.localeCompare(y)});
+$('#atrows').innerHTML=ks.length?ks.map(k=>`<section class="agrp"><h3>${esc(k)} <span class="note">${G[k].length} atleta${G[k].length>1?'s':''}</span></h3>${G[k].map((a,n)=>atLinha(a,n+1)).join('')}</section>`).join(''):'<div class="empty"><b>Nenhum atleta</b>'+(AT.length?'Nada encontrado com esse filtro.':'Quando uma matrícula é aprovada, o atleta aparece aqui. Você também pode adicionar manualmente.')+'</div>'}
+function atLinha(a,n){const u=atFoto(a),sx=sexoDe(a),nas=a.matriculas&&a.matriculas.nascimento,st=a.matriculas&&a.matriculas.status;
+return `<div class="al"><span class="an">${n}</span>${u?`<img class="av" src="${esc(u)}" alt="Foto de ${esc(a.nome_publico)}" loading="lazy">`:`<span class="av av0" aria-hidden="true">${esc(ini(a.nome_publico))}</span>`}<div class="anm"><b>${esc(String(a.nome_publico||'').trim())}</b><span class="note">${esc(String(a.posicao||'').trim()||'Posição não informada')}${a.camisa!=null?' · camisa '+a.camisa:''}${a.publicado?' · no elenco do site':''}</span></div><span class="ach">${esc(catDe(a))}</span>${sx?`<span class="asx ${sx==='Feminino'?'f':'m'}">${sx==='Feminino'?'♀':'♂'} ${sx}</span>`:'<span class="asx">Sexo não informado</span>'}<span class="adt">${nas?fd(nas):'—'}</span>${st&&st!=='Aprovada'?`<span class="badge">${esc(st)}</span>`:''}<span class="aac"><button class="ib" onclick="atVer('${a.id}')" aria-label="Ver ${esc(a.nome_publico)}" title="Ver">${ic('eye')}</button><button class="ib" onclick="atEdit('${a.id}')" aria-label="Editar ${esc(a.nome_publico)}" title="Editar">${ic('pen')}</button><button class="ib danger" onclick="atDel('${a.id}')" aria-label="Excluir ${esc(a.nome_publico)}" title="Excluir">${ic('trash')}</button></span></div>`}
+function atVer(id){const a=AT.find(x=>x.id===id);if(!a)return;const u=atFoto(a),m=a.matriculas||{},sx=sexoDe(a);
+$('#cx').innerHTML=`<button class="btn alt" onclick="atRender()">Voltar</button><div class="card avd"><div class="avh">${u?`<img src="${esc(u)}" alt="Foto de ${esc(a.nome_publico)}">`:`<span class="av0 big">${esc(ini(a.nome_publico))}</span>`}<div><h3 style="margin:0">${esc(String(a.nome_publico||'').trim())}</h3><p class="note" style="margin:4px 0 0">${esc(catDe(a))}${sx?' · '+sx:''}</p></div></div><dl class="adl"><dt>Nascimento</dt><dd>${m.nascimento?fd(m.nascimento)+' ('+idade(m.nascimento)+' anos)':'—'}</dd><dt>Posição</dt><dd>${esc(String(a.posicao||'—').trim())}</dd><dt>Camisa</dt><dd>${a.camisa!=null?a.camisa:'—'}</dd><dt>Matrícula</dt><dd>${esc(m.status||'cadastro manual')}</dd><dt>No elenco do site</dt><dd>${a.publicado?'Sim':'Não'}</dd></dl><div class="row"><button class="btn" onclick="atEdit('${a.id}')">Editar</button>${a.matricula_id?`<button class="btn alt" onclick="sel='${a.matricula_id}';adm(M.indexOf('Matrículas'))">Abrir matrícula</button>`:''}<button class="btn alt" onclick="atDel('${a.id}')">Excluir</button></div></div>`}
 async function atEdit(id){$('#adp').innerHTML='<h3>Atletas</h3><div id="cms"></div>';await cmsOpen('atletas');cmsOpen('atletas',id)}
+function atBack(){adm(M.indexOf('Atletas'))}
+async function atDel(id){const a=AT.find(x=>x.id===id);if(!a||!confirm('Excluir '+String(a.nome_publico||'').trim()+' da lista de atletas e do elenco do site?\n\nA matrícula não é apagada.'))return;
+const {error}=await sb.from('atletas').delete().eq('id',id);if(error){alert('Não foi possível excluir: '+error.message);return}
+if(a.foto_path)await sb.storage.from('publico').remove([a.foto_path]);AT=AT.filter(x=>x.id!==id);pubLoad();atRender()}
+function atExp(){csv('atletas',[['Categoria','cat'],['Nome','nome'],['Sexo','sexo'],['Nascimento','nas'],['Posição','pos'],['Camisa','cam'],['Matrícula','st'],['No elenco do site','pub']],atFiltrados().map(a=>({cat:catDe(a),nome:String(a.nome_publico||'').trim(),sexo:sexoDe(a),nas:a.matriculas&&a.matriculas.nascimento||'',pos:String(a.posicao||'').trim(),cam:a.camisa,st:a.matriculas&&a.matriculas.status||'manual',pub:a.publicado?'sim':'não'})))}
 // CMS: o painel ADM controla o conteúdo do site
 const CMSM={'Atletas':'atletas','Categorias':'categorias','Comissão técnica':'comissao','Treinos e presença':'treinos','Jogos':'jogos','Notícias':'noticias','Avisos':'avisos','Galeria':'galeria','Eventos':'eventos','Sócios':'socios','Loja':'loja','Transparência':'transp','Frases do carrossel':'frases','Patrocinadores':'patrocinadores'};
 const DIAS=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
 const PUB=['publicado','Publicar no site','bool'];
 const CMS={
-atletas:{n:'atletas',o:'nome_publico',r:'nome_publico',f:[['nome_publico','Nome (como aparece no site)'],['sexo','Sexo','sel',['Masculino','Feminino']],['camisa','Número da camisa','num'],['posicao','Posição','sel',['Goleiro','Defensor','Meio-campo','Atacante']],['foto_path','Foto','img'],['publicado','Publicar no elenco (só com autorização do responsável)','bool']]},
+atletas:{n:'atletas',o:'nome_publico',r:'nome_publico',f:[['nome_publico','Nome (como aparece no site)'],['categoria_id','Categoria','catid'],['sexo','Sexo','sel',['Masculino','Feminino']],['camisa','Número da camisa','num'],['posicao','Posição','sel',['Goleiro','Defensor','Meio-campo','Atacante']],['foto_path','Foto','img'],['publicado','Publicar no elenco (só com autorização do responsável)','bool']]},
 categorias:{n:'categorias',o:'nome',r:'nome',f:[['nome','Categoria (ex.: Sub-11)'],['treinador','Treinador'],['local_treino','Local de treino'],['horarios','Horários'],['ativa','Categoria ativa','bool']]},
 comissao:{n:'comissao',o:'nome',r:'nome',f:[['nome','Nome'],['funcao','Função'],['foto_path','Foto','img'],PUB]},
 treinos:{n:'treinos',o:'dia',r:'dia',f:[['dia','Dia da semana','sel',DIAS],['categoria','Categoria'],['horario','Horário (ex.: 18h50 às 22h00)'],['local','Local'],['obs','Observação'],PUB]},
@@ -221,13 +243,15 @@ bt=r=>`<div class="row" style="margin:8px 0 0"><button class="btn alt" onclick="
 if(im)return `<div class="grid">${CROWS.map(r=>`<div class="card">${r[im[0]]?`<img src="${pu(r[im[0]])}" alt="${esc(r[c.r]||'Foto')}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;margin-bottom:8px">`:'<div class="empty" style="aspect-ratio:4/3;display:grid;place-items:center;margin-bottom:8px">Sem foto</div>'}<b>${esc(r[c.r]||'(sem título)')}</b> ${bad(r)}${bt(r)}</div>`).join('')}</div>`;
 return CROWS.map(r=>`<div class="card" style="margin-bottom:8px"><b>${esc(r[c.r]||'(sem título)')}</b> ${bad(r)}${bt(r)}</div>`).join('')}
 function cmsField(f,l,t,o,v){const id='cf_'+f;
+if(t==='catid')return `<label>${l}<select id="${id}"><option value="">Sem categoria</option>${CATADM.map(x=>`<option value="${x.id}"${x.id===v?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></label>`;
 if(t==='bool')return `<label><input id="${id}" type="checkbox" style="width:auto" ${v?'checked':''}> ${l}</label>`;
 if(t==='area')return `<label>${l}<textarea id="${id}" rows="5">${esc(v)}</textarea></label>`;
 if(t==='sel')return `<label>${l}<select id="${id}"><option value=""></option>${o.map(x=>`<option${x===v?' selected':''}>${x}</option>`).join('')}</select></label>`;
 if(t==='img')return `${v?`<img src="${pu(v)}" alt="Foto atual" style="max-width:220px;width:100%;border-radius:8px;display:block;margin:8px 0">`:''}<label>${l}<input id="${id}" type="file" accept="image/*"></label>${v?'<p class="note">A foto atual continua se você não escolher outra.</p>':''}`;
 if(t==='dt'){const d=v?new Date(v):null;const z=d?new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,16):'';return `<label>${l}<input id="${id}" type="datetime-local" value="${z}"></label>`}
 return `<label>${l}<input id="${id}" ${t==='num'?'type="number" inputmode="numeric"':t==='dec'?'inputmode="decimal"':''} value="${esc(v)}"></label>`}
-async function cmsOpen(k,ed){CK=k;const c=CMS[k],el=$('#cms');
+async function cmsOpen(k,ed){CK=k;const c=CMS[k],el=$('#cms');if(k==='atletas'&&ed===undefined){atBack();return}
+if(k==='atletas'&&!CATADM.length){const q=await sb.from('categorias').select('id,nome').order('nome');CATADM=q.data||[]}
 if(!sb||!ME){el.innerHTML='<div class="empty"><b>Entre com o Supabase configurado</b>O conteúdo é salvo no banco de dados.</div>';return}
 if(ed===undefined){const {data,error}=await sb.from(c.n).select('*').order(c.o,{ascending:!c.desc});
 if(error){el.innerHTML='<div class="empty"><b>Erro ao carregar</b>'+esc(error.message)+'<br>Se a tabela não existe, rode o arquivo supabase/sql/04-complemento.sql no Supabase.</div>';return}
@@ -254,9 +278,9 @@ async function cmsDel(id){if(!confirm('Excluir este item?'))return;const c=CMS[C
 const pu=p=>p&&sb?sb.storage.from('publico').getPublicUrl(p).data.publicUrl:'';
 const dh=v=>v?new Date(v).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'';
 const fill=(id,h)=>{const e=document.getElementById(id);if(e&&h){e.className='';e.removeAttribute('style');e.innerHTML=h}};
-let ELENCO=[];
-function renderElenco(){const pos=$('#fp').value,l=ELENCO.filter(a=>pos==='Todas'||a.posicao===pos);
-fill('pub-elenco',l.length?`<div class="grid">${l.map(a=>`<div class="card">${a.foto_path?`<img src="${pu(a.foto_path)}" alt="Foto de ${esc(a.nome_publico)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<h3>${a.camisa!=null?'#'+a.camisa+' ':''}${esc(a.nome_publico)}</h3><p class="note">${esc(a.posicao||'')}</p></div>`).join('')}</div>`:'')}
+let ELENCO=[],CATID={};
+function renderElenco(){const pos=$('#fp').value,ct=$('#fc').value,l=ELENCO.filter(a=>(pos==='Todas'||String(a.posicao||'').trim()===pos)&&(ct==='Todas as categorias'||CATID[a.categoria_id]===ct));
+fill('pub-elenco',l.length?`<div class="grid">${l.map(a=>`<div class="card">${a.foto_path?`<img src="${pu(a.foto_path)}" alt="Foto de ${esc(a.nome_publico)}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;margin-bottom:8px">`:''}<h3>${a.camisa!=null?'#'+a.camisa+' ':''}${esc(a.nome_publico)}</h3><p class="note">${esc([CATID[a.categoria_id],String(a.posicao||'').trim()].filter(Boolean).join(' · '))}</p></div>`).join('')}</div>`:'')}
 async function pubLoad(){if(!sb)return;try{
 const g=async(t,o,asc,f)=>{const r=await sb.from(t).select('*').eq(f||'publicado',true).order(o,{ascending:asc});return r.data||[]};
 const [no,av,jo,at,pa,ca,tr,ga,ev,td,lj,rs,tx,fr]=await Promise.all([g('noticias','criado',false),g('avisos','criado',false),g('jogos','data_hora',true),g('atletas','nome_publico',true),g('patrocinadores','nome',true),g('categorias','nome',true,'ativa'),g('treinos','dia',true),g('galeria','criado',false),g('eventos','data_hora',true),g('transparencia_docs','ano',false),g('loja_produtos','criado',false),sb.rpc('resumo_transparencia'),sb.from('site_textos').select('*'),g('frases','criado',true)]);
@@ -267,7 +291,8 @@ const jc=j=>`<div class="card" style="margin-bottom:8px"><b>${j.placar_ide!=null
 const agora=Date.now(),prox=jo.filter(j=>new Date(j.data_hora)>=agora),ant=jo.filter(j=>new Date(j.data_hora)<agora).reverse();
 fill('home-jogos',prox.slice(0,3).map(jc).join(''));
 fill('pub-jogos',(prox.length?'<h3>Próximos jogos</h3>'+prox.map(jc).join(''):'')+(ant.length?'<h3 style="margin-top:14px">Resultados</h3>'+ant.map(jc).join(''):''));
-ELENCO=at;renderElenco();$('#fp').onchange=renderElenco;
+CATID=Object.fromEntries(ca.map(x=>[x.id,x.nome]));{const fc=$('#fc'),cur=fc.value;fc.innerHTML='<option>Todas as categorias</option>'+[...new Set(at.map(x=>CATID[x.categoria_id]).filter(Boolean))].sort((x,y)=>(+(/\d+/.exec(x)||[0])[0])-(+(/\d+/.exec(y)||[0])[0])||x.localeCompare(y)).map(n=>`<option>${esc(n)}</option>`).join('');if([...fc.options].some(o=>o.value===cur))fc.value=cur}
+ELENCO=at;renderElenco();$('#fp').onchange=renderElenco;$('#fc').onchange=renderElenco;
 fill('pub-cat',ca.map(x=>`<div class="card" style="margin-bottom:8px"><h3>${esc(x.nome)}</h3><p class="note">Treinador: ${esc(x.treinador||'a definir')} · ${esc(x.local_treino||'')} ${esc(x.horarios||'')}</p></div>`).join(''));
 const pc=x=>`<div class="card" style="margin-bottom:8px">${x.logo_path?`<img src="${pu(x.logo_path)}" alt="" style="height:48px;margin-bottom:6px">`:''}<h3>${x.link?`<a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.nome)}</a>`:esc(x.nome)}</h3><span class="badge">${esc(x.nivel||'')}</span><p class="note">${esc(x.descricao||'')}</p></div>`;
 fill('home-patro',pa.map(pc).join(''));
